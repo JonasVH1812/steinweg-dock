@@ -1,3 +1,7 @@
+// For production (Vercel): Change provider to "postgresql" and set DATABASE_URL to your Postgres connection string
+// Free options: Vercel Postgres, Supabase, Neon, Turso
+// Then run: npx prisma migrate dev --name init
+
 generator client {
   provider = "prisma-client-js"
 }

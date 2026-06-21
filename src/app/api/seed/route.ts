@@ -3,6 +3,12 @@ import { NextResponse } from 'next/server';
 
 export async function POST() {
   try {
+    // Check if database is already seeded
+    const existingUser = await db.user.findFirst();
+    if (existingUser) {
+      return NextResponse.json({ success: true, message: 'Database already seeded, skipping' });
+    }
+
     // Create demo users
     const admin = await db.user.create({ data: { email: 'admin@steinweg.be', name: 'Jan De Smedt', password: 'demo123', role: 'admin', badge: 'ADM-001', phone: '+32 470 00 00 01' }});
     const worker1 = await db.user.create({ data: { email: 'worker1@steinweg.be', name: 'Pieter Van Dijk', password: 'demo123', role: 'dock_worker', badge: 'DW-042', phone: '+32 470 00 00 02' }});
