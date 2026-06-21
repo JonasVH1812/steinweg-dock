@@ -29,7 +29,11 @@ export async function POST() {
   } catch (error: any) {
     console.error('Setup error:', error);
     await db.$disconnect();
-    return NextResponse.json({ error: error.message, stack: error.stack?.substring(0, 500) }, { status: 500 });
+    return NextResponse.json({ 
+      error: error.message, 
+      code: error.code,
+      meta: error.meta ? JSON.stringify(error.meta).substring(0, 500) : undefined
+    }, { status: 500 });
   }
 }
 
