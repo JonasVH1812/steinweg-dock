@@ -1,34 +1,40 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { Pool } from 'pg';
 
 export async function GET() {
   const results: Record<string, any> = {};
-
-  // Check if DATABASE_URL is set
+  
+  // Check env vars
   results.databaseUrlSet = !!process.env.DATABASE_URL;
-  results.databaseUrlPrefix = process.env.DATABASE_URL?.substring(0, 30) + '...' || 'NOT SET';
-  results.directUrlSet = !!process.env.DIRECT_URL;
+  results.databaseUrlPrefix = process.env.DATABASE_URL?.substring(0, 40) + '...' || 'NOT SET';
+  results.nodeEnv = process.env.NODE_ENV;
 
-  // Try connecting
-  const db = new PrismaClient({ log: ['error'] });
+  if (!process.env.DATABASE_URL) {
+    results.error = 'DATABASE_URL is not set!';
+    return NextResponse.json(results, { status: 200 });
+  }
+
+  // Try connecting with pg directly
+  let pool: Pool | null = null;
   try {
-    await db.$connect();
+    pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    const client = await pool.connect();
     results.connected = true;
-
-    // Try a simple query
-    try {
-      const count = await db.user.count();
-      results.userCount = count;
-      results.tablesExist = true;
-    } catch (queryError: any) {
-      results.tablesExist = false;
-      results.queryError = queryError.message;
-    }
-  } catch (connectError: any) {
+    
+    // Check if tables exist
+    const tableCheck = await client.query(`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = 'public' LIMIT 10
+    `);
+    results.tables = tableCheck.rows.map((r: any) => r.table_name);
+    results.tablesExist = tableCheck.rows.length > 0;
+    
+    client.release();
+  } catch (err: any) {
     results.connected = false;
-    results.connectError = connectError.message;
+    results.error = err.message;
   } finally {
-    await db.$disconnect();
+    if (pool) await pool.end();
   }
 
   return NextResponse.json(results, { status: 200 });
