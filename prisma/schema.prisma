@@ -121,6 +121,7 @@ model Document {
   truckVisitId  String?
   truckVisit    TruckVisit?     @relation(fields: [truckVisitId], references: [id])
   content       String?         // JSON string with document fields
+  photos        String?         // JSON array of photo filenames
   notes         String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt

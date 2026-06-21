@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { signOut } from 'next-auth/react';
 
 export type UserRole = 'dock_worker' | 'chauffeur' | 'admin';
 
@@ -38,5 +39,8 @@ export const useAppStore = create<AppState>((set) => ({
   setCurrentView: (view) => set({ currentView: view, sidebarOpen: false }),
   setSeeded: (seeded) => set({ seeded }),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
-  logout: () => set({ currentUser: null, currentRole: 'dock_worker', currentView: 'dashboard' }),
+  logout: () => {
+    signOut({ redirect: false });
+    set({ currentUser: null, currentRole: 'dock_worker', currentView: 'dashboard' });
+  },
 }));

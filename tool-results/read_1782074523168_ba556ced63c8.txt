@@ -1,0 +1,1541 @@
+     1→'use client';
+     2→
+     3→import React, { useEffect, useState, useRef, useTransition, useCallback } from 'react';
+     4→import { useAppStore, UserRole, AppView } from '@/lib/store';
+     5→import {
+     6→  Ship, Truck, FileText, Shield, Clock, Warehouse, Bell, BarChart3,
+     7→  LogOut, Menu, X, ChevronRight, Package, CheckCircle2, AlertTriangle,
+     8→  AlertCircle, Info, Plus, Timer, MapPin, User, Phone, BadgeCheck,
+     9→  ClipboardList, ArrowRight, ArrowLeft, Eye, Edit, SignPlus,
+    10→  Anchor, Container, Box, CircleDot, Search, Filter, Download,
+    11→  Upload, Camera, Signature, CheckCheck, XCircle, MoreVertical,
+    12→  Play, Pause, Square, CalendarDays, Route as RouteIcon, HardHat
+    13→} from 'lucide-react';
+    14→import { Button } from '@/components/ui/button';
+    15→import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+    16→import { Badge } from '@/components/ui/badge';
+    17→import { Input } from '@/components/ui/input';
+    18→import { Label } from '@/components/ui/label';
+    19→import { Textarea } from '@/components/ui/textarea';
+    20→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+    21→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    22→import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+    23→import { Checkbox } from '@/components/ui/checkbox';
+    24→import { Progress } from '@/components/ui/progress';
+    25→import { Separator } from '@/components/ui/separator';
+    26→import { ScrollArea } from '@/components/ui/scroll-area';
+    27→import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+    28→import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+    29→import { toast } from '@/hooks/use-toast';
+    30→import { Toaster } from '@/components/ui/toaster';
+    31→
+    32→// ============ TYPES ============
+    33→interface Shift { id: string; userId: string; type: string; status: string; checkIn: string; checkOut: string | null; location: string | null; notes: string | null; user?: any; }
+    34→interface CargoOperation { id: string; operationType: string; status: string; vesselName: string | null; voyageNumber: string | null; berthNumber: string | null; warehouseId: string | null; cargoType: string | null; reference: string | null; weight: number | null; unitCount: number | null; description: string | null; assignedTo: string | null; startedAt: string | null; completedAt: string | null; warehouse?: any; assignee?: any; items?: CargoItem[]; }
+    35→interface CargoItem { id: string; cargoOpId: string; itemType: string; markOrNumber: string | null; description: string | null; quantity: number; weight: number | null; condition: string; damageNotes: string | null; storageLocation: string | null; checked: boolean; }
+    36→interface Document { id: string; docType: string; reference: string; status: string; cargoOpId: string | null; truckVisitId: string | null; content: string | null; notes: string | null; createdAt: string; signatures?: any[]; }
+    37→interface SafetyChecklist { id: string; userId: string; checkType: string; status: string; location: string | null; notes: string | null; createdAt: string; user?: any; items?: SafetyCheckItem[]; }
+    38→interface SafetyCheckItem { id: string; checklistId: string; category: string; question: string; passed: boolean | null; notes: string | null; orderIndex: number; }
+    39→interface TruckVisit { id: string; driverName: string; driverLicense: string | null; company: string | null; truckPlate: string; trailerPlate: string | null; purpose: string; status: string; dockNumber: string | null; expectedArrival: string | null; arrivedAt: string | null; dockAssignedAt: string | null; completedAt: string | null; cargoDescription: string | null; blReference: string | null; bookingRef: string | null; notes: string | null; documents?: Document[]; }
+    40→interface Warehouse { id: string; name: string; code: string; location: string | null; type: string; capacity: number | null; area: number | null; storageLocations?: any[]; }
+    41→interface Notification { id: string; type: string; title: string; message: string; read: boolean; category: string | null; createdAt: string; }
+    42→interface Stats { activeShifts: number; pendingCargo: number; inProgressCargo: number; completedCargo: number; expectedTrucks: number; atDockTrucks: number; pendingDocs: number; activeSafetyChecks: number; unreadNotifications: number; totalWorkers: number; totalChauffeurs: number; warehouses: any[]; }
+    43→
+    44→// ============ HELPER FUNCTIONS ============
+    45→const formatDate = (d: string | null) => d ? new Date(d).toLocaleString('nl-BE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+    46→const formatTime = (d: string | null) => d ? new Date(d).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' }) : '-';
+    47→const timeSince = (d: string) => { const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000); if (s < 60) return `${s}s`; if (s < 3600) return `${Math.floor(s/60)}m`; if (s < 86400) return `${Math.floor(s/3600)}h`; return `${Math.floor(s/86400)}d`; };
+    48→
+    49→const statusColors: Record<string, string> = {
+    50→  pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    51→  in_progress: 'bg-blue-100 text-blue-800 border-blue-300',
+    52→  active: 'bg-green-100 text-green-800 border-green-300',
+    53→  completed: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    54→  approved: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    55→  signed: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    56→  draft: 'bg-gray-100 text-gray-800 border-gray-300',
+    57→  pending_review: 'bg-orange-100 text-orange-800 border-orange-300',
+    58→  failed: 'bg-red-100 text-red-800 border-red-300',
+    59→  cancelled: 'bg-red-100 text-red-800 border-red-300',
+    60→  ended: 'bg-gray-100 text-gray-800 border-gray-300',
+    61→  break: 'bg-purple-100 text-purple-800 border-purple-300',
+    62→  expected: 'bg-cyan-100 text-cyan-800 border-cyan-300',
+    63→  arrived: 'bg-blue-100 text-blue-800 border-blue-300',
+    64→  at_dock: 'bg-green-100 text-green-800 border-green-300',
+    65→  loading: 'bg-orange-100 text-orange-800 border-orange-300',
+    66→  archived: 'bg-gray-100 text-gray-700 border-gray-300',
+    67→};
+    68→
+    69→const cargoTypeIcons: Record<string, React.ReactNode> = {
+    70→  breakbulk: <Package className="h-4 w-4" />,
+    71→  container: <Container className="h-4 w-4" />,
+    72→  roro: <Truck className="h-4 w-4" />,
+    73→  bulk: <CircleDot className="h-4 w-4" />,
+    74→};
+    75→
+    76→const notifIcons: Record<string, React.ReactNode> = {
+    77→  urgent: <AlertCircle className="h-4 w-4 text-red-500" />,
+    78→  warning: <AlertTriangle className="h-4 w-4 text-yellow-500" />,
+    79→  info: <Info className="h-4 w-4 text-blue-500" />,
+    80→  task: <ClipboardList className="h-4 w-4 text-purple-500" />,
+    81→};
+    82→
+    83→// ============ LOGIN SCREEN ============
+    84→function LoginScreen() {
+    85→  const { setCurrentUser, setCurrentRole, seeded, setSeeded } = useAppStore();
+    86→  const [users, setUsers] = useState<any[]>([]);
+    87→  const [loading, setLoading] = useState(false);
+    88→  const [seedLoading, setSeedLoading] = useState(false);
+    89→
+    90→  const fetchUsers = useCallback(async () => {
+    91→    const res = await fetch('/api/users');
+    92→    if (res.ok) { const data = await res.json(); setUsers(data); if (data.length > 0) setSeeded(true); }
+    93→  }, [setSeeded]);
+    94→
+    95→  const [, startTransitionLogin] = useTransition();
+    96→  useEffect(() => {
+    97→    fetch('/api/users').then(r => r.json()).then(data => {
+    98→      startTransitionLogin(() => { setUsers(data); if (data.length > 0) setSeeded(true); });
+    99→    });
+   100→  }, [startTransitionLogin, setSeeded]);
+   101→
+   102→  const seedDb = async () => {
+   103→    setSeedLoading(true);
+   104→    const res = await fetch('/api/seed', { method: 'POST' });
+   105→    if (res.ok) { setSeeded(true); await fetchUsers(); toast({ title: 'Database seeded', description: 'Demo data loaded successfully' }); }
+   106→    setSeedLoading(false);
+   107→  };
+   108→
+   109→  const loginAs = async (user: any) => {
+   110→    setLoading(true);
+   111→    setCurrentUser(user);
+   112→    setCurrentRole(user.role as UserRole);
+   113→    setLoading(false);
+   114→  };
+   115→
+   116→  return (
+   117→    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+   118→      <div className="w-full max-w-md">
+   119→        <div className="text-center mb-8">
+   120→          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 mb-4 shadow-lg shadow-orange-500/25">
+   121→            <Anchor className="h-10 w-10 text-white" />
+   122→          </div>
+   123→          <h1 className="text-3xl font-bold text-white">Steinweg Dock</h1>
+   124→          <p className="text-slate-400 mt-2">C. Steinweg Belgium N.V. — Port of Antwerp</p>
+   125→          <p className="text-slate-500 text-sm mt-1">Digital Dock Management System</p>
+   126→        </div>
+   127→
+   128→        {!seeded ? (
+   129→          <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
+   130→            <CardHeader className="text-center">
+   131→              <CardTitle className="text-white">Welcome</CardTitle>
+   132→              <CardDescription className="text-slate-400">Load demo data to get started</CardDescription>
+   133→            </CardHeader>
+   134→            <CardContent>
+   135→              <Button onClick={seedDb} disabled={seedLoading} className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white h-12 text-lg">
+   136→                {seedLoading ? 'Loading...' : '🚀 Load Demo Data & Start'}
+   137→              </Button>
+   138→            </CardContent>
+   139→          </Card>
+   140→        ) : (
+   141→          <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
+   142→            <CardHeader className="text-center">
+   143→              <CardTitle className="text-white">Sign In</CardTitle>
+   144→              <CardDescription className="text-slate-400">Choose your profile to continue</CardDescription>
+   145→            </CardHeader>
+   146→            <CardContent className="space-y-3">
+   147→              {users.map((user) => (
+   148→                <button key={user.id} onClick={() => loginAs(user)} disabled={loading}
+   149→                  className="w-full flex items-center gap-4 p-4 rounded-xl border border-slate-600 bg-slate-700/50 hover:bg-slate-700 hover:border-amber-500/50 transition-all duration-200 text-left group">
+   150→                  <Avatar className="h-12 w-12 border-2 border-slate-500 group-hover:border-amber-500 transition-colors">
+   151→                    <AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-600 text-white font-bold">
+   152→                      {user.name.split(' ').map((n: string) => n[0]).join('')}
+   153→                    </AvatarFallback>
+   154→                  </Avatar>
+   155→                  <div className="flex-1">
+   156→                    <p className="text-white font-semibold">{user.name}</p>
+   157→                    <p className="text-slate-400 text-sm">{user.badge} — {user.role === 'dock_worker' ? 'Dock Worker' : user.role === 'chauffeur' ? 'Chauffeur' : 'Admin'}</p>
+   158→                  </div>
+   159→                  <ChevronRight className="h-5 w-5 text-slate-500 group-hover:text-amber-500 transition-colors" />
+   160→                </button>
+   161→              ))}
+   162→            </CardContent>
+   163→          </Card>
+   164→        )}
+   165→
+   166→        <div className="mt-6 grid grid-cols-3 gap-3">
+   167→          {[
+   168→            { icon: <Shield className="h-5 w-5" />, label: 'Safety First' },
+   169→            { icon: <FileText className="h-5 w-5" />, label: 'Paperless' },
+   170→            { icon: <Clock className="h-5 w-5" />, label: 'Real-time' },
+   171→          ].map((f, i) => (
+   172→            <div key={i} className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
+   173→              <div className="text-amber-500 flex justify-center mb-1">{f.icon}</div>
+   174→              <p className="text-slate-400 text-xs">{f.label}</p>
+   175→            </div>
+   176→          ))}
+   177→        </div>
+   178→      </div>
+   179→    </div>
+   180→  );
+   181→}
+   182→
+   183→// ============ SIDEBAR NAV ============
+   184→function SidebarNav() {
+   185→  const { currentRole, currentView, setCurrentView, currentUser, logout, sidebarOpen, setSidebarOpen } = useAppStore();
+   186→
+   187→  const workerNav: { view: AppView; icon: React.ReactNode; label: string }[] = [
+   188→    { view: 'dashboard', icon: <BarChart3 className="h-5 w-5" />, label: 'Dashboard' },
+   189→    { view: 'shifts', icon: <Clock className="h-5 w-5" />, label: 'My Shift' },
+   190→    { view: 'cargo', icon: <Ship className="h-5 w-5" />, label: 'Cargo Ops' },
+   191→    { view: 'documents', icon: <FileText className="h-5 w-5" />, label: 'Documents' },
+   192→    { view: 'safety', icon: <Shield className="h-5 w-5" />, label: 'Safety' },
+   193→    { view: 'warehouses', icon: <Warehouse className="h-5 w-5" />, label: 'Warehouses' },
+   194→    { view: 'notifications', icon: <Bell className="h-5 w-5" />, label: 'Alerts' },
+   195→  ];
+   196→
+   197→  const chauffeurNav: { view: AppView; icon: React.ReactNode; label: string }[] = [
+   198→    { view: 'dashboard', icon: <BarChart3 className="h-5 w-5" />, label: 'Dashboard' },
+   199→    { view: 'trucks', icon: <Truck className="h-5 w-5" />, label: 'My Visits' },
+   200→    { view: 'documents', icon: <FileText className="h-5 w-5" />, label: 'Documents' },
+   201→    { view: 'notifications', icon: <Bell className="h-5 w-5" />, label: 'Alerts' },
+   202→  ];
+   203→
+   204→  const adminNav: { view: AppView; icon: React.ReactNode; label: string }[] = [
+   205→    { view: 'dashboard', icon: <BarChart3 className="h-5 w-5" />, label: 'Dashboard' },
+   206→    { view: 'shifts', icon: <Clock className="h-5 w-5" />, label: 'Shifts' },
+   207→    { view: 'cargo', icon: <Ship className="h-5 w-5" />, label: 'Cargo Ops' },
+   208→    { view: 'documents', icon: <FileText className="h-5 w-5" />, label: 'Documents' },
+   209→    { view: 'safety', icon: <Shield className="h-5 w-5" />, label: 'Safety' },
+   210→    { view: 'trucks', icon: <Truck className="h-5 w-5" />, label: 'Trucks' },
+   211→    { view: 'warehouses', icon: <Warehouse className="h-5 w-5" />, label: 'Warehouses' },
+   212→    { view: 'notifications', icon: <Bell className="h-5 w-5" />, label: 'Alerts' },
+   213→    { view: 'reports', icon: <BarChart3 className="h-5 w-5" />, label: 'Reports' },
+   214→  ];
+   215→
+   216→  const navItems = currentRole === 'admin' ? adminNav : currentRole === 'chauffeur' ? chauffeurNav : workerNav;
+   217→
+   218→  return (
+   219→    <>
+   220→      {/* Mobile overlay */}
+   221→      {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+   222→
+   223→      <aside className={`fixed top-0 left-0 z-50 h-full w-72 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700 transform transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+   224→        <div className="flex items-center gap-3 p-6 border-b border-slate-700">
+   225→          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
+   226→            <Anchor className="h-5 w-5 text-white" />
+   227→          </div>
+   228→          <div>
+   229→            <h2 className="text-white font-bold text-sm">Steinweg Dock</h2>
+   230→            <p className="text-slate-500 text-xs">Port of Antwerp</p>
+   231→          </div>
+   232→          <button onClick={() => setSidebarOpen(false)} className="ml-auto lg:hidden text-slate-400 hover:text-white">
+   233→            <X className="h-5 w-5" />
+   234→          </button>
+   235→        </div>
+   236→
+   237→        <div className="p-4 border-b border-slate-700/50">
+   238→          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50">
+   239→            <Avatar className="h-10 w-10">
+   240→              <AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-600 text-white text-sm font-bold">
+   241→                {currentUser?.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+   242→              </AvatarFallback>
+   243→            </Avatar>
+   244→            <div className="flex-1 min-w-0">
+   245→              <p className="text-white font-medium text-sm truncate">{currentUser?.name}</p>
+   246→              <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-400 bg-amber-500/10">
+   247→                {currentRole === 'dock_worker' ? 'Dock Worker' : currentRole === 'chauffeur' ? 'Chauffeur' : 'Admin'}
+   248→              </Badge>
+   249→            </div>
+   250→          </div>
+   251→        </div>
+   252→
+   253→        <ScrollArea className="flex-1 p-3" style={{ height: 'calc(100vh - 290px)' }}>
+   254→          <nav className="space-y-1 pb-4">
+   255→            {navItems.map((item) => (
+   256→              <button key={item.view} onClick={() => setCurrentView(item.view)}
+   257→                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+   258→                  currentView === item.view
+   259→                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+   260→                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50 border border-transparent'
+   261→                }`}>
+   262→                {item.icon}
+   263→                {item.label}
+   264→              </button>
+   265→            ))}
+   266→          </nav>
+   267→        </ScrollArea>
+   268→
+   269→        <div className="p-4 border-t border-slate-700">
+   270→          <button onClick={logout}
+   271→            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all">
+   272→            <LogOut className="h-5 w-5" /> Sign Out
+   273→          </button>
+   274→        </div>
+   275→      </aside>
+   276→    </>
+   277→  );
+   278→}
+   279→
+   280→// ============ TOP BAR ============
+   281→function TopBar() {
+   282→  const { currentView, setSidebarOpen } = useAppStore();
+   283→  const viewTitles: Record<AppView, string> = {
+   284→    dashboard: 'Dashboard', shifts: 'Shift Management', cargo: 'Cargo Operations',
+   285→    documents: 'Documents', safety: 'Safety Checklists', trucks: 'Truck Visits',
+   286→    warehouses: 'Warehouses', notifications: 'Notifications', reports: 'Reports & Analytics',
+   287→  };
+   288→
+   289→  return (
+   290→    <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700">
+   291→      <div className="flex items-center justify-between px-4 lg:px-6 h-16">
+   292→        <div className="flex items-center gap-3">
+   293→          <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+   294→            <Menu className="h-5 w-5" />
+   295→          </button>
+   296→          <h1 className="text-xl font-bold text-slate-900 dark:text-white">{viewTitles[currentView]}</h1>
+   297→        </div>
+   298→        <div className="flex items-center gap-2">
+   299→          <QuickNotifications />
+   300→        </div>
+   301→      </div>
+   302→    </header>
+   303→  );
+   304→}
+   305→
+   306→function QuickNotifications() {
+   307→  const [notifs, setNotifs] = useState<Notification[]>([]);
+   308→  useEffect(() => { fetch('/api/notifications').then(r => r.json()).then(setNotifs); }, []);
+   309→  const unread = notifs.filter(n => !n.read).length;
+   310→  return (
+   311→    <Dialog>
+   312→      <DialogTrigger asChild>
+   313→        <button className="relative p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+   314→          <Bell className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+   315→          {unread > 0 && <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">{unread}</span>}
+   316→        </button>
+   317→      </DialogTrigger>
+   318→      <DialogContent className="max-w-md">
+   319→        <DialogHeader>
+   320→          <DialogTitle>Notifications</DialogTitle>
+   321→          <DialogDescription>Recent alerts and updates</DialogDescription>
+   322→        </DialogHeader>
+   323→        <ScrollArea className="max-h-80">
+   324→          {notifs.length === 0 ? <p className="text-center text-muted-foreground py-8">No notifications</p> :
+   325→            notifs.map(n => (
+   326→              <div key={n.id} className={`flex gap-3 p-3 rounded-lg mb-2 ${n.read ? 'opacity-60' : 'bg-slate-50 dark:bg-slate-800'}`}>
+   327→                <div className="mt-0.5">{notifIcons[n.type] || <Info className="h-4 w-4" />}</div>
+   328→                <div className="flex-1 min-w-0">
+   329→                  <p className="font-medium text-sm">{n.title}</p>
+   330→                  <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
+   331→                  <p className="text-xs text-muted-foreground mt-1">{timeSince(n.createdAt)} ago</p>
+   332→                </div>
+   333→              </div>
+   334→            ))
+   335→          }
+   336→        </ScrollArea>
+   337→      </DialogContent>
+   338→    </Dialog>
+   339→  );
+   340→}
+   341→
+   342→// ============ DASHBOARD ============
+   343→function Dashboard() {
+   344→  const { currentRole } = useAppStore();
+   345→  const [stats, setStats] = useState<Stats | null>(null);
+   346→  const [recentCargo, setRecentCargo] = useState<CargoOperation[]>([]);
+   347→  const [trucks, setTrucks] = useState<TruckVisit[]>([]);
+   348→  const [notifs, setNotifs] = useState<Notification[]>([]);
+   349→
+   350→  useEffect(() => {
+   351→    Promise.all([
+   352→      fetch('/api/stats').then(r => r.json()),
+   353→      fetch('/api/cargo?status=in_progress').then(r => r.json()),
+   354→      fetch('/api/trucks').then(r => r.json()),
+   355→      fetch('/api/notifications').then(r => r.json()),
+   356→    ]).then(([s, c, t, n]) => { setStats(s); setRecentCargo(c); setTrucks(t); setNotifs(n); });
+   357→  }, []);
+   358→
+   359→  if (!stats) return <div className="p-6"><div className="animate-pulse space-y-4"><div className="h-32 bg-slate-200 rounded-xl" /><div className="grid grid-cols-2 gap-4"><div className="h-24 bg-slate-200 rounded-xl" /><div className="h-24 bg-slate-200 rounded-xl" /><div className="h-24 bg-slate-200 rounded-xl" /><div className="h-24 bg-slate-200 rounded-xl" /></div></div></div>;
+   360→
+   361→  const statCards = currentRole === 'chauffeur' ? [
+   362→    { label: 'My Visits', value: trucks.filter(t => t.status !== 'completed').length, icon: <Truck className="h-6 w-6" />, color: 'from-blue-500 to-cyan-500' },
+   363→    { label: 'Pending Docs', value: stats.pendingDocs, icon: <FileText className="h-6 w-6" />, color: 'from-amber-500 to-orange-500' },
+   364→    { label: 'At Dock', value: stats.atDockTrucks, icon: <MapPin className="h-6 w-6" />, color: 'from-green-500 to-emerald-500' },
+   365→    { label: 'Alerts', value: stats.unreadNotifications, icon: <Bell className="h-6 w-6" />, color: 'from-red-500 to-pink-500' },
+   366→  ] : [
+   367→    { label: 'Active Shifts', value: stats.activeShifts, icon: <Clock className="h-6 w-6" />, color: 'from-green-500 to-emerald-500' },
+   368→    { label: 'Cargo In Progress', value: stats.inProgressCargo, icon: <Ship className="h-6 w-6" />, color: 'from-blue-500 to-cyan-500' },
+   369→    { label: 'Trucks at Dock', value: stats.atDockTrucks, icon: <Truck className="h-6 w-6" />, color: 'from-amber-500 to-orange-500' },
+   370→    { label: 'Pending Docs', value: stats.pendingDocs, icon: <FileText className="h-6 w-6" />, color: 'from-purple-500 to-violet-500' },
+   371→    { label: 'Safety Checks', value: stats.activeSafetyChecks, icon: <Shield className="h-6 w-6" />, color: 'from-red-500 to-pink-500' },
+   372→    { label: 'Alerts', value: stats.unreadNotifications, icon: <Bell className="h-6 w-6" />, color: 'from-slate-500 to-slate-600' },
+   373→  ];
+   374→
+   375→  return (
+   376→    <div className="p-4 lg:p-6 space-y-6 max-w-7xl mx-auto">
+   377→      {/* Stats Grid */}
+   378→      <div className={`grid gap-4 ${currentRole === 'chauffeur' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 lg:grid-cols-3'}`}>
+   379→        {statCards.map((card, i) => (
+   380→          <Card key={i} className="overflow-hidden border-0 shadow-lg">
+   381→            <CardContent className="p-0">
+   382→              <div className={`bg-gradient-to-br ${card.color} p-4 lg:p-5 text-white`}>
+   383→                <div className="flex items-center justify-between">
+   384→                  <div>
+   385→                    <p className="text-white/80 text-xs font-medium uppercase tracking-wider">{card.label}</p>
+   386→                    <p className="text-3xl font-bold mt-1">{card.value}</p>
+   387→                  </div>
+   388→                  <div className="opacity-80">{card.icon}</div>
+   389→                </div>
+   390→              </div>
+   391→            </CardContent>
+   392→          </Card>
+   393→        ))}
+   394→      </div>
+   395→
+   396→      <div className="grid gap-6 lg:grid-cols-2">
+   397→        {/* Active Cargo Operations */}
+   398→        <Card>
+   399→          <CardHeader className="pb-3">
+   400→            <CardTitle className="text-lg flex items-center gap-2"><Ship className="h-5 w-5 text-blue-500" /> Active Cargo Operations</CardTitle>
+   401→          </CardHeader>
+   402→          <CardContent className="space-y-3">
+   403→            {recentCargo.length === 0 ? <p className="text-muted-foreground text-sm py-4">No active operations</p> :
+   404→              recentCargo.slice(0, 3).map(op => (
+   405→                <div key={op.id} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+   406→                  <div className="mt-1 text-blue-500">{cargoTypeIcons[op.cargoType || ''] || <Package className="h-4 w-4" />}</div>
+   407→                  <div className="flex-1 min-w-0">
+   408→                    <p className="font-medium text-sm truncate">{op.vesselName}</p>
+   409→                    <p className="text-xs text-muted-foreground">{op.operationType} — Berth {op.berthNumber}</p>
+   410→                    <div className="flex items-center gap-2 mt-1">
+   411→                      <Badge className={statusColors[op.status] || ''} variant="outline">{op.status.replace('_', ' ')}</Badge>
+   412→                      {op.weight && <span className="text-xs text-muted-foreground">{op.weight.toLocaleString()} kg</span>}
+   413→                    </div>
+   414→                  </div>
+   415→                </div>
+   416→              ))
+   417→            }
+   418→          </CardContent>
+   419→        </Card>
+   420→
+   421→        {/* Today's Trucks */}
+   422→        <Card>
+   423→          <CardHeader className="pb-3">
+   424→            <CardTitle className="text-lg flex items-center gap-2"><Truck className="h-5 w-5 text-amber-500" /> Today&apos;s Truck Visits</CardTitle>
+   425→          </CardHeader>
+   426→          <CardContent className="space-y-3">
+   427→            {trucks.length === 0 ? <p className="text-muted-foreground text-sm py-4">No truck visits today</p> :
+   428→              trucks.slice(0, 4).map(tv => (
+   429→                <div key={tv.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+   430→                  <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">
+   431→                    <Truck className="h-5 w-5" />
+   432→                  </div>
+   433→                  <div className="flex-1 min-w-0">
+   434→                    <p className="font-medium text-sm">{tv.driverName}</p>
+   435→                    <p className="text-xs text-muted-foreground">{tv.truckPlate} — {tv.company}</p>
+   436→                  </div>
+   437→                  <Badge className={statusColors[tv.status] || ''} variant="outline">{tv.status.replace('_', ' ')}</Badge>
+   438→                </div>
+   439→              ))
+   440→            }
+   441→          </CardContent>
+   442→        </Card>
+   443→
+   444→        {/* Warehouse Overview */}
+   445→        <Card className="lg:col-span-2">
+   446→          <CardHeader className="pb-3">
+   447→            <CardTitle className="text-lg flex items-center gap-2"><Warehouse className="h-5 w-5 text-emerald-500" /> Warehouse Occupancy</CardTitle>
+   448→          </CardHeader>
+   449→          <CardContent>
+   450→            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+   451→              {stats.warehouses.map((wh: any) => {
+   452→                const pct = wh.totalSlots > 0 ? Math.round((wh.occupiedSlots / wh.totalSlots) * 100) : 0;
+   453→                return (
+   454→                  <div key={wh.id} className="p-4 rounded-xl border bg-slate-50 dark:bg-slate-800/50">
+   455→                    <div className="flex items-center gap-2 mb-2">
+   456→                      <Badge variant="outline" className="text-xs">{wh.code}</Badge>
+   457→                      <span className="text-xs text-muted-foreground capitalize">{wh.type}</span>
+   458→                    </div>
+   459→                    <p className="font-semibold text-sm truncate">{wh.name}</p>
+   460→                    <div className="mt-3">
+   461→                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+   462→                        <span>{wh.occupiedSlots}/{wh.totalSlots} slots</span>
+   463→                        <span>{pct}%</span>
+   464→                      </div>
+   465→                      <Progress value={pct} className="h-2" />
+   466→                    </div>
+   467→                  </div>
+   468→                );
+   469→              })}
+   470→            </div>
+   471→          </CardContent>
+   472→        </Card>
+   473→      </div>
+   474→    </div>
+   475→  );
+   476→}
+   477→
+   478→// ============ SHIFT MANAGEMENT ============
+   479→function ShiftManagement() {
+   480→  const { currentUser } = useAppStore();
+   481→  const [shifts, setShifts] = useState<Shift[]>([]);
+   482→  const [activeShift, setActiveShift] = useState<Shift | null>(null);
+   483→  const [checkInDialog, setCheckInDialog] = useState(false);
+   484→  const [newShift, setNewShift] = useState({ type: 'day', location: '' });
+   485→
+   486→  const shiftsLoadedRef = useRef(false);
+   487→  const [, startTransition] = useTransition();
+   488→  const loadShifts = useCallback(async () => {
+   489→    if (!currentUser) return;
+   490→    const [allShifts, myShifts] = await Promise.all([
+   491→      fetch('/api/shifts').then(r => r.json()),
+   492→      fetch(`/api/shifts?userId=${currentUser.id}&status=active`).then(r => r.json()),
+   493→    ]);
+   494→    startTransition(() => {
+   495→      setShifts(allShifts);
+   496→      setActiveShift(myShifts.length > 0 ? myShifts[0] : null);
+   497→    });
+   498→  }, [currentUser, startTransition]);
+   499→
+   500→  useEffect(() => {
+   501→    if (currentUser && !shiftsLoadedRef.current) {
+   502→      shiftsLoadedRef.current = true;
+   503→      loadShifts();
+   504→    }
+   505→  }, [currentUser, loadShifts]);
+   506→
+   507→  const checkIn = async () => {
+   508→    if (!currentUser) return;
+   509→    const res = await fetch('/api/shifts', {
+   510→      method: 'POST',
+   511→      headers: { 'Content-Type': 'application/json' },
+   512→      body: JSON.stringify({ userId: currentUser.id, type: newShift.type, location: newShift.location, status: 'active' }),
+   513→    });
+   514→    if (res.ok) { toast({ title: 'Checked In', description: `Shift started at ${newShift.location}` }); setCheckInDialog(false); loadShifts(); }
+   515→  };
+   516→
+   517→  const checkOut = async () => {
+   518→    if (!activeShift) return;
+   519→    const res = await fetch('/api/shifts', {
+   520→      method: 'PATCH',
+   521→      headers: { 'Content-Type': 'application/json' },
+   522→      body: JSON.stringify({ id: activeShift.id, status: 'ended', checkOut: new Date().toISOString() }),
+   523→    });
+   524→    if (res.ok) { toast({ title: 'Checked Out', description: 'Shift ended' }); loadShifts(); }
+   525→  };
+   526→
+   527→  const startBreak = async () => {
+   528→    if (!activeShift) return;
+   529→    const res = await fetch('/api/shifts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: activeShift.id, status: 'break' }) });
+   530→    if (res.ok) { toast({ title: 'Break Started' }); loadShifts(); }
+   531→  };
+   532→
+   533→  const endBreak = async () => {
+   534→    if (!activeShift) return;
+   535→    const res = await fetch('/api/shifts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: activeShift.id, status: 'active' }) });
+   536→    if (res.ok) { toast({ title: 'Break Ended' }); loadShifts(); }
+   537→  };
+   538→
+   539→  return (
+   540→    <div className="p-4 lg:p-6 space-y-6 max-w-4xl mx-auto">
+   541→      {/* Active Shift Card */}
+   542→      <Card className="overflow-hidden border-0 shadow-lg">
+   543→        {activeShift ? (
+   544→          <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white">
+   545→            <div className="flex items-center justify-between">
+   546→              <div>
+   547→                <p className="text-green-100 text-sm font-medium">Active Shift</p>
+   548→                <p className="text-2xl font-bold mt-1">{activeShift.type === 'day' ? 'Day' : 'Night'} Shift</p>
+   549→                <div className="flex items-center gap-4 mt-2 text-green-100 text-sm">
+   550→                  <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {formatTime(activeShift.checkIn)}</span>
+   551→                  <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {activeShift.location || 'Not assigned'}</span>
+   552→                </div>
+   553→              </div>
+   554→              <div className="text-right">
+   555→                <Badge className="bg-white/20 text-white border-white/30 text-sm">{activeShift.status}</Badge>
+   556→                <p className="text-green-100 text-sm mt-2">Since {timeSince(activeShift.checkIn)}</p>
+   557→              </div>
+   558→            </div>
+   559→            <div className="flex gap-3 mt-6">
+   560→              {activeShift.status === 'active' ? (
+   561→                <Button onClick={startBreak} variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-0">
+   562→                  <Pause className="h-4 w-4 mr-2" /> Break
+   563→                </Button>
+   564→              ) : (
+   565→                <Button onClick={endBreak} variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-0">
+   566→                  <Play className="h-4 w-4 mr-2" /> Resume
+   567→                </Button>
+   568→              )}
+   569→              <Button onClick={checkOut} variant="secondary" className="bg-red-500/80 hover:bg-red-500 text-white border-0">
+   570→                <Square className="h-4 w-4 mr-2" /> Check Out
+   571→              </Button>
+   572→            </div>
+   573→          </div>
+   574→        ) : (
+   575→          <div className="bg-gradient-to-r from-slate-600 to-slate-700 p-6 text-white text-center">
+   576→            <Timer className="h-12 w-12 mx-auto mb-3 opacity-50" />
+   577→            <p className="text-lg font-semibold">No Active Shift</p>
+   578→            <p className="text-slate-300 text-sm mt-1">Check in to start your shift</p>
+   579→            <Dialog open={checkInDialog} onOpenChange={setCheckInDialog}>
+   580→              <DialogTrigger asChild>
+   581→                <Button className="mt-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white">
+   582→                  <Clock className="h-4 w-4 mr-2" /> Check In
+   583→                </Button>
+   584→              </DialogTrigger>
+   585→              <DialogContent>
+   586→                <DialogHeader><DialogTitle>Check In for Shift</DialogTitle></DialogHeader>
+   587→                <div className="space-y-4">
+   588→                  <div><Label>Shift Type</Label>
+   589→                    <Select value={newShift.type} onValueChange={(v) => setNewShift(p => ({ ...p, type: v }))}>
+   590→                      <SelectTrigger><SelectValue /></SelectTrigger>
+   591→                      <SelectContent><SelectItem value="day">Day Shift (06:00-14:00)</SelectItem><SelectItem value="night">Night Shift (14:00-22:00)</SelectItem></SelectContent>
+   592→                    </Select>
+   593→                  </div>
+   594→                  <div><Label>Location / Dock</Label>
+   595→                    <Input placeholder="e.g. Quai 125, Berth 127" value={newShift.location} onChange={(e) => setNewShift(p => ({ ...p, location: e.target.value }))} />
+   596→                  </div>
+   597→                </div>
+   598→                <DialogFooter><Button onClick={checkIn} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">Start Shift</Button></DialogFooter>
+   599→              </DialogContent>
+   600→            </Dialog>
+   601→          </div>
+   602→        )}
+   603→      </Card>
+   604→
+   605→      {/* Shift History */}
+   606→      <Card>
+   607→        <CardHeader><CardTitle className="text-lg">Recent Shifts</CardTitle></CardHeader>
+   608→        <CardContent>
+   609→          <div className="space-y-2">
+   610→            {shifts.map(s => (
+   611→              <div key={s.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+   612→                <div className={`w-2 h-2 rounded-full ${s.status === 'active' ? 'bg-green-500' : s.status === 'break' ? 'bg-purple-500' : 'bg-gray-400'}`} />
+   613→                <div className="flex-1 min-w-0">
+   614→                  <p className="font-medium text-sm">{s.user?.name || 'Unknown'}</p>
+   615→                  <p className="text-xs text-muted-foreground">{s.type} shift — {s.location || 'No location'}</p>
+   616→                </div>
+   617→                <div className="text-right">
+   618→                  <Badge className={statusColors[s.status] || ''} variant="outline">{s.status}</Badge>
+   619→                  <p className="text-xs text-muted-foreground mt-1">{formatTime(s.checkIn)} — {s.checkOut ? formatTime(s.checkOut) : '...'}</p>
+   620→                </div>
+   621→              </div>
+   622→            ))}
+   623→          </div>
+   624→        </CardContent>
+   625→      </Card>
+   626→    </div>
+   627→  );
+   628→}
+   629→
+   630→// ============ CARGO OPERATIONS ============
+   631→function CargoOperations() {
+   632→  const [operations, setOperations] = useState<CargoOperation[]>([]);
+   633→  const [filter, setFilter] = useState('all');
+   634→  const [selectedOp, setSelectedOp] = useState<CargoOperation | null>(null);
+   635→  const [newOpDialog, setNewOpDialog] = useState(false);
+   636→  const { currentUser } = useAppStore();
+   637→  const [newOp, setNewOp] = useState({ operationType: 'unloading', vesselName: '', berthNumber: '', cargoType: 'breakbulk', description: '' });
+   638→
+   639→  const [, startTransitionOps] = useTransition();
+   640→  const loadOps = useCallback(async () => {
+   641→    const status = filter !== 'all' ? filter : '';
+   642→    const url = status ? `/api/cargo?status=${status}` : '/api/cargo';
+   643→    const data = await fetch(url).then(r => r.json());
+   644→    startTransitionOps(() => { setOperations(data); });
+   645→  }, [filter, startTransitionOps]);
+   646→
+   647→  useEffect(() => {
+   648→    loadOps();
+   649→  }, [loadOps]);
+   650→
+   651→  const createOp = async () => {
+   652→    await fetch('/api/cargo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...newOp, status: 'pending', assignedTo: currentUser?.id }) });
+   653→    setNewOpDialog(false);
+   654→    toast({ title: 'Cargo Operation Created' });
+   655→    loadOps();
+   656→  };
+   657→
+   658→  const updateStatus = async (id: string, status: string) => {
+   659→    const data: any = { id, status };
+   660→    if (status === 'in_progress') data.startedAt = new Date().toISOString();
+   661→    if (status === 'completed') data.completedAt = new Date().toISOString();
+   662→    await fetch('/api/cargo', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+   663→    toast({ title: `Status updated to ${status}` });
+   664→    loadOps();
+   665→  };
+   666→
+   667→  const toggleItemCheck = async (item: CargoItem) => {
+   668→    await fetch('/api/cargo-items', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: item.id, checked: !item.checked }) });
+   669→    loadOps();
+   670→    if (selectedOp) {
+   671→      const fresh = await fetch(`/api/cargo`).then(r => r.json());
+   672→      const found = fresh.find((o: CargoOperation) => o.id === selectedOp.id);
+   673→      if (found) setSelectedOp(found);
+   674→    }
+   675→  };
+   676→
+   677→  return (
+   678→    <div className="p-4 lg:p-6 space-y-4 max-w-6xl mx-auto">
+   679→      <div className="flex flex-wrap items-center gap-2">
+   680→        {['all', 'pending', 'in_progress', 'completed'].map(f => (
+   681→          <Button key={f} variant={filter === f ? 'default' : 'outline'} size="sm" onClick={() => setFilter(f)} className={filter === f ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}>
+   682→            {f === 'all' ? 'All' : f.replace('_', ' ')}
+   683→          </Button>
+   684→        ))}
+   685→        <div className="flex-1" />
+   686→        <Button onClick={() => setNewOpDialog(true)} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
+   687→          <Plus className="h-4 w-4 mr-2" /> New Operation
+   688→        </Button>
+   689→      </div>
+   690→
+   691→      {selectedOp ? (
+   692→        <Card>
+   693→          <CardHeader>
+   694→            <div className="flex items-center justify-between">
+   695→              <div>
+   696→                <CardTitle className="flex items-center gap-2">
+   697→                  {cargoTypeIcons[selectedOp.cargoType || '']}{selectedOp.vesselName}
+   698→                </CardTitle>
+   699→                <CardDescription>{selectedOp.operationType} — {selectedOp.description}</CardDescription>
+   700→              </div>
+   701→              <Button variant="ghost" size="sm" onClick={() => setSelectedOp(null)}><ArrowLeft className="h-4 w-4 mr-1" /> Back</Button>
+   702→            </div>
+   703→          </CardHeader>
+   704→          <CardContent className="space-y-4">
+   705→            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   706→              {[
+   707→                { label: 'Voyage', value: selectedOp.voyageNumber },
+   708→                { label: 'Berth', value: selectedOp.berthNumber },
+   709→                { label: 'Reference', value: selectedOp.reference },
+   710→                { label: 'Weight', value: selectedOp.weight ? `${selectedOp.weight.toLocaleString()} kg` : '-' },
+   711→              ].map((d, i) => (
+   712→                <div key={i} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+   713→                  <p className="text-xs text-muted-foreground">{d.label}</p>
+   714→                  <p className="font-semibold text-sm mt-0.5">{d.value || '-'}</p>
+   715→                </div>
+   716→              ))}
+   717→            </div>
+   718→
+   719→            <div className="flex gap-2">
+   720→              {selectedOp.status === 'pending' && <Button onClick={() => updateStatus(selectedOp.id, 'in_progress')} className="bg-blue-500 text-white"><Play className="h-4 w-4 mr-2" />Start</Button>}
+   721→              {selectedOp.status === 'in_progress' && <Button onClick={() => updateStatus(selectedOp.id, 'completed')} className="bg-green-500 text-white"><CheckCircle2 className="h-4 w-4 mr-2" />Complete</Button>}
+   722→            </div>
+   723→
+   724→            {/* Cargo Items / Tally */}
+   725→            <div>
+   726→              <h3 className="font-semibold mb-3 flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Cargo Tally ({selectedOp.items?.length || 0} items)</h3>
+   727→              <div className="space-y-2">
+   728→                {selectedOp.items?.map(item => (
+   729→                  <div key={item.id} className={`flex items-center gap-3 p-3 rounded-lg border ${item.checked ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-white dark:bg-slate-800'}`}>
+   730→                    <Checkbox checked={item.checked} onCheckedChange={() => toggleItemCheck(item)} />
+   731→                    <div className="flex-1 min-w-0">
+   732→                      <p className="font-medium text-sm">{item.markOrNumber} — {item.itemType}</p>
+   733→                      <p className="text-xs text-muted-foreground">{item.description} — Qty: {item.quantity}{item.weight ? ` / ${item.weight.toLocaleString()} kg` : ''}</p>
+   734→                    </div>
+   735→                    <Badge className={item.condition === 'good' ? 'bg-green-100 text-green-800 border-green-300' : item.condition === 'damaged' ? 'bg-red-100 text-red-800 border-red-300' : 'bg-yellow-100 text-yellow-800 border-yellow-300'} variant="outline">
+   736→                      {item.condition}
+   737→                    </Badge>
+   738→                    {item.damageNotes && <span className="text-xs text-red-500">{item.damageNotes}</span>}
+   739→                  </div>
+   740→                ))}
+   741→              </div>
+   742→            </div>
+   743→          </CardContent>
+   744→        </Card>
+   745→      ) : (
+   746→        <div className="grid gap-4">
+   747→          {operations.map(op => (
+   748→            <Card key={op.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedOp(op)}>
+   749→              <CardContent className="p-4">
+   750→                <div className="flex items-start gap-4">
+   751→                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white shrink-0">
+   752→                    {cargoTypeIcons[op.cargoType || ''] || <Package className="h-6 w-6" />}
+   753→                  </div>
+   754→                  <div className="flex-1 min-w-0">
+   755→                    <div className="flex items-center gap-2">
+   756→                      <h3 className="font-semibold truncate">{op.vesselName || 'No vessel'}</h3>
+   757→                      <Badge className={statusColors[op.status] || ''} variant="outline">{op.status.replace('_', ' ')}</Badge>
+   758→                    </div>
+   759→                    <p className="text-sm text-muted-foreground mt-0.5">{op.operationType} — {op.cargoType} — Berth {op.berthNumber || '-'}</p>
+   760→                    <p className="text-sm text-muted-foreground truncate">{op.description}</p>
+   761→                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+   762→                      <span>{op.reference}</span>
+   763→                      {op.weight && <span>{op.weight.toLocaleString()} kg</span>}
+   764→                      {op.items && <span>{op.items.length} items</span>}
+   765→                      {op.assignee && <span>{op.assignee.name}</span>}
+   766→                    </div>
+   767→                  </div>
+   768→                  <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+   769→                </div>
+   770→              </CardContent>
+   771→            </Card>
+   772→          ))}
+   773→        </div>
+   774→      )}
+   775→
+   776→      {/* New Operation Dialog */}
+   777→      <Dialog open={newOpDialog} onOpenChange={setNewOpDialog}>
+   778→        <DialogContent>
+   779→          <DialogHeader><DialogTitle>New Cargo Operation</DialogTitle></DialogHeader>
+   780→          <div className="space-y-4">
+   781→            <div><Label>Operation Type</Label>
+   782→              <Select value={newOp.operationType} onValueChange={(v) => setNewOp(p => ({ ...p, operationType: v }))}>
+   783→                <SelectTrigger><SelectValue /></SelectTrigger>
+   784→                <SelectContent>
+   785→                  <SelectItem value="unloading">Unloading</SelectItem><SelectItem value="loading">Loading</SelectItem>
+   786→                  <SelectItem value="tally">Tally Check</SelectItem><SelectItem value="transfer">Transfer</SelectItem>
+   787→                </SelectContent>
+   788→              </Select>
+   789→            </div>
+   790→            <div><Label>Vessel Name</Label><Input placeholder="e.g. MV ATLANTIC STAR" value={newOp.vesselName} onChange={(e) => setNewOp(p => ({ ...p, vesselName: e.target.value }))} /></div>
+   791→            <div><Label>Berth Number</Label><Input placeholder="e.g. 125" value={newOp.berthNumber} onChange={(e) => setNewOp(p => ({ ...p, berthNumber: e.target.value }))} /></div>
+   792→            <div><Label>Cargo Type</Label>
+   793→              <Select value={newOp.cargoType} onValueChange={(v) => setNewOp(p => ({ ...p, cargoType: v }))}>
+   794→                <SelectTrigger><SelectValue /></SelectTrigger>
+   795→                <SelectContent>
+   796→                  <SelectItem value="breakbulk">Breakbulk</SelectItem><SelectItem value="container">Container</SelectItem>
+   797→                  <SelectItem value="roro">RoRo</SelectItem><SelectItem value="bulk">Bulk</SelectItem>
+   798→                </SelectContent>
+   799→              </Select>
+   800→            </div>
+   801→            <div><Label>Description</Label><Textarea placeholder="Cargo description..." value={newOp.description} onChange={(e) => setNewOp(p => ({ ...p, description: e.target.value }))} /></div>
+   802→          </div>
+   803→          <DialogFooter><Button onClick={createOp} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">Create Operation</Button></DialogFooter>
+   804→        </DialogContent>
+   805→      </Dialog>
+   806→    </div>
+   807→  );
+   808→}
+   809→
+   810→// ============ DOCUMENTS ============
+   811→function DocumentManagement() {
+   812→  const [documents, setDocuments] = useState<Document[]>([]);
+   813→  const [filter, setFilter] = useState('all');
+   814→  const [newDocDialog, setNewDocDialog] = useState(false);
+   815→  const [newDoc, setNewDoc] = useState({ docType: 'bill_of_lading', reference: '', notes: '' });
+   816→  const [viewDoc, setViewDoc] = useState<Document | null>(null);
+   817→
+   818→  const [, startTransitionDocs] = useTransition();
+   819→  const loadDocs = useCallback(async () => {
+   820→    const status = filter !== 'all' ? filter : '';
+   821→    const url = status ? `/api/documents?status=${status}` : '/api/documents';
+   822→    const data = await fetch(url).then(r => r.json());
+   823→    startTransitionDocs(() => { setDocuments(data); });
+   824→  }, [filter, startTransitionDocs]);
+   825→
+   826→  useEffect(() => {
+   827→    loadDocs();
+   828→  }, [loadDocs]);
+   829→
+   830→  const createDoc = async () => {
+   831→    await fetch('/api/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...newDoc, status: 'draft' }) });
+   832→    setNewDocDialog(false);
+   833→    toast({ title: 'Document Created' });
+   834→    loadDocs();
+   835→  };
+   836→
+   837→  const signDoc = async (docId: string) => {
+   838→    const { currentUser } = useAppStore.getState();
+   839→    if (!currentUser) return;
+   840→    await fetch('/api/documents', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: docId, status: 'signed' }) });
+   841→    toast({ title: 'Document Signed', description: 'Digital signature applied' });
+   842→    loadDocs();
+   843→  };
+   844→
+   845→  const docTypeLabels: Record<string, string> = {
+   846→    bill_of_lading: 'Bill of Lading', delivery_note: 'Delivery Note', damage_report: 'Damage Report',
+   847→    customs: 'Customs Declaration', packing_list: 'Packing List', weigh_bridge: 'Weigh Bridge Ticket',
+   848→  };
+   849→
+   850→  const docTypeIcons: Record<string, React.ReactNode> = {
+   851→    bill_of_lading: <Ship className="h-4 w-4 text-blue-500" />,
+   852→    delivery_note: <Truck className="h-4 w-4 text-amber-500" />,
+   853→    damage_report: <AlertTriangle className="h-4 w-4 text-red-500" />,
+   854→    customs: <Shield className="h-4 w-4 text-purple-500" />,
+   855→    packing_list: <ClipboardList className="h-4 w-4 text-green-500" />,
+   856→    weigh_bridge: <BarChart3 className="h-4 w-4 text-cyan-500" />,
+   857→  };
+   858→
+   859→  return (
+   860→    <div className="p-4 lg:p-6 space-y-4 max-w-6xl mx-auto">
+   861→      <div className="flex flex-wrap items-center gap-2">
+   862→        {['all', 'draft', 'pending_review', 'approved', 'signed'].map(f => (
+   863→          <Button key={f} variant={filter === f ? 'default' : 'outline'} size="sm" onClick={() => setFilter(f)} className={filter === f ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}>
+   864→            {f === 'all' ? 'All' : f.replace('_', ' ')}
+   865→          </Button>
+   866→        ))}
+   867→        <div className="flex-1" />
+   868→        <Button onClick={() => setNewDocDialog(true)} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
+   869→          <Plus className="h-4 w-4 mr-2" /> New Document
+   870→        </Button>
+   871→      </div>
+   872→
+   873→      <div className="grid gap-4">
+   874→        {documents.map(doc => (
+   875→          <Card key={doc.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setViewDoc(viewDoc?.id === doc.id ? null : doc)}>
+   876→            <CardContent className="p-4">
+   877→              <div className="flex items-start gap-4">
+   878→                <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+   879→                  {docTypeIcons[doc.docType] || <FileText className="h-5 w-5 text-muted-foreground" />}
+   880→                </div>
+   881→                <div className="flex-1 min-w-0">
+   882→                  <div className="flex items-center gap-2">
+   883→                    <h3 className="font-semibold text-sm">{docTypeLabels[doc.docType] || doc.docType}</h3>
+   884→                    <Badge className={statusColors[doc.status] || ''} variant="outline">{doc.status.replace('_', ' ')}</Badge>
+   885→                  </div>
+   886→                  <p className="text-sm text-muted-foreground">Ref: {doc.reference}</p>
+   887→                  {doc.content && (() => { try { const p = JSON.parse(doc.content); return <p className="text-xs text-muted-foreground mt-1 truncate max-w-lg">{Object.entries(p).slice(0,3).map(([k,v]) => `${k}: ${v}`).join(' · ')}</p>; } catch { return <p className="text-xs text-muted-foreground mt-1 truncate max-w-lg">{doc.content}</p>; } })()}
+   888→                  {doc.signatures && doc.signatures.length > 0 && (
+   889→                    <div className="flex items-center gap-1 mt-2">
+   890→                      <Signature className="h-3 w-3 text-green-500" />
+   891→                      <span className="text-xs text-green-600">{doc.signatures.length} signature(s)</span>
+   892→                    </div>
+   893→                  )}
+   894→                </div>
+   895→                <div className="text-right shrink-0">
+   896→                  <p className="text-xs text-muted-foreground">{formatDate(doc.createdAt)}</p>
+   897→                  {doc.status !== 'signed' && doc.status !== 'archived' && (
+   898→                    <Button size="sm" variant="outline" className="mt-2 text-xs" onClick={(e) => { e.stopPropagation(); signDoc(doc.id); }}>
+   899→                      <Signature className="h-3 w-3 mr-1" /> Sign
+   900→                    </Button>
+   901→                  )}
+   902→                </div>
+   903→              </div>
+   904→              {/* Expanded view */}
+   905→              {viewDoc?.id === doc.id && doc.content && (
+   906→                <div className="mt-4 pt-4 border-t">
+   907→                  <h4 className="font-medium text-sm mb-2">Document Details</h4>
+   908→                  <div className="grid grid-cols-2 gap-2">
+   909→                    {(() => { try { const parsed = JSON.parse(doc.content); return Object.entries(parsed).map(([k, v]) => (
+   910→                      <div key={k} className="p-2 rounded bg-slate-50 dark:bg-slate-800/50">
+   911→                        <p className="text-xs text-muted-foreground">{k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}</p>
+   912→                        <p className="text-sm font-medium">{String(v)}</p>
+   913→                      </div>
+   914→                    )); } catch { return <p className="col-span-2 text-sm text-muted-foreground">{doc.content}</p>; } })()}
+   915→                  </div>
+   916→                  {doc.notes && <p className="text-sm text-muted-foreground mt-3 italic">Notes: {doc.notes}</p>}
+   917→                </div>
+   918→              )}
+   919→            </CardContent>
+   920→          </Card>
+   921→        ))}
+   922→      </div>
+   923→
+   924→      <Dialog open={newDocDialog} onOpenChange={setNewDocDialog}>
+   925→        <DialogContent>
+   926→          <DialogHeader><DialogTitle>Create Document</DialogTitle></DialogHeader>
+   927→          <div className="space-y-4">
+   928→            <div><Label>Document Type</Label>
+   929→              <Select value={newDoc.docType} onValueChange={(v) => setNewDoc(p => ({ ...p, docType: v }))}>
+   930→                <SelectTrigger><SelectValue /></SelectTrigger>
+   931→                <SelectContent>
+   932→                  {Object.entries(docTypeLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+   933→                </SelectContent>
+   934→              </Select>
+   935→            </div>
+   936→            <div><Label>Reference Number</Label><Input placeholder="e.g. BL-ANT-2026-5521" value={newDoc.reference} onChange={(e) => setNewDoc(p => ({ ...p, reference: e.target.value }))} /></div>
+   937→            <div><Label>Notes</Label><Textarea placeholder="Additional notes..." value={newDoc.notes} onChange={(e) => setNewDoc(p => ({ ...p, notes: e.target.value }))} /></div>
+   938→          </div>
+   939→          <DialogFooter><Button onClick={createDoc} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">Create Document</Button></DialogFooter>
+   940→        </DialogContent>
+   941→      </Dialog>
+   942→    </div>
+   943→  );
+   944→}
+   945→
+   946→// ============ SAFETY CHECKLISTS ============
+   947→function SafetyChecklists() {
+   948→  const [checklists, setChecklists] = useState<SafetyChecklist[]>([]);
+   949→  const [selectedCl, setSelectedCl] = useState<SafetyChecklist | null>(null);
+   950→  const [newClDialog, setNewClDialog] = useState(false);
+   951→  const [newCl, setNewCl] = useState({ checkType: 'pre_shift', location: '' });
+   952→  const { currentUser } = useAppStore();
+   953→
+   954→  const safetyLoadedRef = useRef(false);
+   955→  const [, startTransitionSafety] = useTransition();
+   956→  const loadChecklists = useCallback(async () => {
+   957→    const data = await fetch('/api/safety').then(r => r.json());
+   958→    startTransitionSafety(() => { setChecklists(data); });
+   959→  }, [startTransitionSafety]);
+   960→
+   961→  useEffect(() => {
+   962→    if (!safetyLoadedRef.current) {
+   963→      safetyLoadedRef.current = true;
+   964→      loadChecklists();
+   965→    }
+   966→  }, [loadChecklists]);
+   967→
+   968→  const createChecklist = async () => {
+   969→    if (!currentUser) return;
+   970→    const items = getChecklistTemplate(newCl.checkType);
+   971→    await fetch('/api/safety', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: currentUser.id, checkType: newCl.checkType, location: newCl.location, status: 'pending', items }) });
+   972→    setNewClDialog(false);
+   973→    toast({ title: 'Safety Checklist Created' });
+   974→    loadChecklists();
+   975→  };
+   976→
+   977→  const answerItem = async (itemId: string, passed: boolean) => {
+   978→    if (!selectedCl) return;
+   979→    const updatedItems = selectedCl.items?.map(i => i.id === itemId ? { ...i, passed } : i);
+   980→    await fetch('/api/safety', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: selectedCl.id, items: updatedItems?.map(i => ({ id: i.id, passed: i.passed, notes: i.notes })) }) });
+   981→    loadChecklists();
+   982→    const fresh = await fetch('/api/safety').then(r => r.json());
+   983→    const found = fresh.find((c: SafetyChecklist) => c.id === selectedCl.id);
+   984→    if (found) setSelectedCl(found);
+   985→  };
+   986→
+   987→  const completeChecklist = async () => {
+   988→    if (!selectedCl) return;
+   989→    const allAnswered = selectedCl.items?.every(i => i.passed !== null);
+   990→    const anyFailed = selectedCl.items?.some(i => i.passed === false);
+   991→    await fetch('/api/safety', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: selectedCl.id, status: anyFailed ? 'failed' : 'completed' }) });
+   992→    toast({ title: anyFailed ? 'Checklist Failed — Issues Found' : 'Checklist Completed — All Clear', variant: anyFailed ? 'destructive' : 'default' });
+   993→    loadChecklists();
+   994→    setSelectedCl(null);
+   995→  };
+   996→
+   997→  const clTypeLabels: Record<string, string> = {
+   998→    pre_shift: 'Pre-Shift Check', dock_safety: 'Dock Safety', equipment: 'Equipment Check',
+   999→    hazardous_cargo: 'Hazardous Cargo', crane_lift: 'Crane/Lift Safety',
+  1000→  };
+  1001→
+  1002→  return (
+  1003→    <div className="p-4 lg:p-6 space-y-4 max-w-4xl mx-auto">
+  1004→      <div className="flex items-center justify-between">
+  1005→        <h2 className="text-lg font-semibold">Safety Checklists</h2>
+  1006→        <Dialog open={newClDialog} onOpenChange={setNewClDialog}>
+  1007→          <DialogTrigger asChild>
+  1008→            <Button className="bg-gradient-to-r from-red-500 to-pink-600 text-white">
+  1009→              <Plus className="h-4 w-4 mr-2" /> New Checklist
+  1010→            </Button>
+  1011→          </DialogTrigger>
+  1012→          <DialogContent>
+  1013→            <DialogHeader><DialogTitle>Start Safety Checklist</DialogTitle></DialogHeader>
+  1014→            <div className="space-y-4">
+  1015→              <div><Label>Check Type</Label>
+  1016→                <Select value={newCl.checkType} onValueChange={(v) => setNewCl(p => ({ ...p, checkType: v }))}>
+  1017→                  <SelectTrigger><SelectValue /></SelectTrigger>
+  1018→                  <SelectContent>
+  1019→                    {Object.entries(clTypeLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+  1020→                  </SelectContent>
+  1021→                </Select>
+  1022→              </div>
+  1023→              <div><Label>Location</Label><Input placeholder="e.g. Quai 125" value={newCl.location} onChange={(e) => setNewCl(p => ({ ...p, location: e.target.value }))} /></div>
+  1024→            </div>
+  1025→            <DialogFooter><Button onClick={createChecklist} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">Start Check</Button></DialogFooter>
+  1026→          </DialogContent>
+  1027→        </Dialog>
+  1028→      </div>
+  1029→
+  1030→      {selectedCl ? (
+  1031→        <Card>
+  1032→          <CardHeader>
+  1033→            <div className="flex items-center justify-between">
+  1034→              <div>
+  1035→                <CardTitle className="flex items-center gap-2"><HardHat className="h-5 w-5 text-orange-500" /> {clTypeLabels[selectedCl.checkType] || selectedCl.checkType}</CardTitle>
+  1036→                <CardDescription>{selectedCl.location} — {formatDate(selectedCl.createdAt)}</CardDescription>
+  1037→              </div>
+  1038→              <Button variant="ghost" size="sm" onClick={() => setSelectedCl(null)}><ArrowLeft className="h-4 w-4 mr-1" /> Back</Button>
+  1039→            </div>
+  1040→          </CardHeader>
+  1041→          <CardContent className="space-y-6">
+  1042→            {(() => {
+  1043→              const categories = [...new Set(selectedCl.items?.map(i => i.category) || [])];
+  1044→              return categories.map(cat => (
+  1045→                <div key={cat}>
+  1046→                  <h4 className="font-semibold text-sm mb-3 flex items-center gap-2"><Shield className="h-4 w-4 text-slate-500" /> {cat}</h4>
+  1047→                  <div className="space-y-2">
+  1048→                    {selectedCl.items?.filter(i => i.category === cat).map(item => (
+  1049→                      <div key={item.id} className={`flex items-center gap-3 p-3 rounded-lg border ${
+  1050→                        item.passed === true ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' :
+  1051→                        item.passed === false ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
+  1052→                        'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+  1053→                      }`}>
+  1054→                        <p className="flex-1 text-sm">{item.question}</p>
+  1055→                        <div className="flex gap-2 shrink-0">
+  1056→                          <Button size="sm" variant={item.passed === true ? 'default' : 'outline'} className={item.passed === true ? 'bg-green-500 text-white' : ''} onClick={() => answerItem(item.id, true)}>
+  1057→                            <CheckCircle2 className="h-4 w-4" />
+  1058→                          </Button>
+  1059→                          <Button size="sm" variant={item.passed === false ? 'default' : 'outline'} className={item.passed === false ? 'bg-red-500 text-white' : ''} onClick={() => answerItem(item.id, false)}>
+  1060→                            <XCircle className="h-4 w-4" />
+  1061→                          </Button>
+  1062→                        </div>
+  1063→                      </div>
+  1064→                    ))}
+  1065→                  </div>
+  1066→                </div>
+  1067→              ));
+  1068→            })()}
+  1069→            <div className="flex justify-end pt-4 border-t">
+  1070→              <Button onClick={completeChecklist} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+  1071→                <CheckCheck className="h-4 w-4 mr-2" /> Submit Checklist
+  1072→              </Button>
+  1073→            </div>
+  1074→          </CardContent>
+  1075→        </Card>
+  1076→      ) : (
+  1077→        <div className="grid gap-4">
+  1078→          {checklists.map(cl => {
+  1079→            const total = cl.items?.length || 0;
+  1080→            const answered = cl.items?.filter(i => i.passed !== null).length || 0;
+  1081→            const failed = cl.items?.filter(i => i.passed === false).length || 0;
+  1082→            return (
+  1083→              <Card key={cl.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedCl(cl)}>
+  1084→                <CardContent className="p-4">
+  1085→                  <div className="flex items-start gap-4">
+  1086→                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+  1087→                      cl.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30 text-green-600' :
+  1088→                      cl.status === 'failed' ? 'bg-red-100 dark:bg-red-900/30 text-red-600' :
+  1089→                      'bg-orange-100 dark:bg-orange-900/30 text-orange-600'
+  1090→                    }`}>
+  1091→                      <Shield className="h-6 w-6" />
+  1092→                    </div>
+  1093→                    <div className="flex-1 min-w-0">
+  1094→                      <div className="flex items-center gap-2">
+  1095→                        <h3 className="font-semibold text-sm">{clTypeLabels[cl.checkType] || cl.checkType}</h3>
+  1096→                        <Badge className={statusColors[cl.status] || ''} variant="outline">{cl.status}</Badge>
+  1097→                      </div>
+  1098→                      <p className="text-sm text-muted-foreground">{cl.location} — {cl.user?.name}</p>
+  1099→                      <div className="mt-2">
+  1100→                        <div className="flex justify-between text-xs text-muted-foreground mb-1">
+  1101→                          <span>{answered}/{total} answered {failed > 0 && `(${failed} failed)`}</span>
+  1102→                          <span>{total > 0 ? Math.round((answered / total) * 100) : 0}%</span>
+  1103→                        </div>
+  1104→                        <Progress value={total > 0 ? (answered / total) * 100 : 0} className="h-2" />
+  1105→                      </div>
+  1106→                    </div>
+  1107→                    <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+  1108→                  </div>
+  1109→                </CardContent>
+  1110→              </Card>
+  1111→            );
+  1112→          })}
+  1113→        </div>
+  1114→      )}
+  1115→    </div>
+  1116→  );
+  1117→}
+  1118→
+  1119→function getChecklistTemplate(type: string): { category: string; question: string }[] {
+  1120→  const templates: Record<string, { category: string; question: string }[]> = {
+  1121→    pre_shift: [
+  1122→      { category: 'Personal Protective Equipment', question: 'Hard hat worn and in good condition?' },
+  1123→      { category: 'Personal Protective Equipment', question: 'Safety boots worn?' },
+  1124→      { category: 'Personal Protective Equipment', question: 'High-visibility vest worn?' },
+  1125→      { category: 'Personal Protective Equipment', question: 'Safety glasses available?' },
+  1126→      { category: 'Personal Protective Equipment', question: 'Hearing protection available?' },
+  1127→      { category: 'Equipment', question: 'Crane pre-use inspection completed?' },
+  1128→      { category: 'Equipment', question: 'Slings and chains inspected?' },
+  1129→      { category: 'Equipment', question: 'Forklift daily check done?' },
+  1130→      { category: 'Work Area', question: 'Dock area clear of obstructions?' },
+  1131→      { category: 'Work Area', question: 'Warning signs and barriers in place?' },
+  1132→      { category: 'Work Area', question: 'Adequate lighting for operations?' },
+  1133→      { category: 'Emergency', question: 'Fire extinguishers accessible?' },
+  1134→      { category: 'Emergency', question: 'Emergency exits clear?' },
+  1135→      { category: 'Emergency', question: 'First aid kit available and stocked?' },
+  1136→    ],
+  1137→    dock_safety: [
+  1138→      { category: 'Dock Edge', question: 'Dock edge protection in place?' },
+  1139→      { category: 'Dock Edge', question: 'Life rings and throw lines available?' },
+  1140→      { category: 'Dock Edge', question: 'Gangway/bridge properly secured?' },
+  1141→      { category: 'Vehicle Safety', question: 'Wheel chocks in place for trailers?' },
+  1142→      { category: 'Vehicle Safety', question: 'Dock levellers functioning correctly?' },
+  1143→      { category: 'Vehicle Safety', question: 'Traffic management plan active?' },
+  1144→      { category: 'Weather', question: 'Weather conditions safe for operations?' },
+  1145→      { category: 'Weather', question: 'Wind speed within limits for crane ops?' },
+  1146→    ],
+  1147→    equipment: [
+  1148→      { category: 'Crane', question: 'Wire ropes inspected - no visible damage?' },
+  1149→      { category: 'Crane', question: 'Load indicators working?' },
+  1150→      { category: 'Crane', question: 'Emergency stop tested?' },
+  1151→      { category: 'Forklift', question: 'Fluid levels checked (oil, hydraulic, coolant)?' },
+  1152→      { category: 'Forklift', question: 'Tyres in good condition?' },
+  1153→      { category: 'Forklift', question: 'Horn and lights working?' },
+  1154→      { category: 'Lifting Gear', question: 'All slings tagged and within inspection date?' },
+  1155→      { category: 'Lifting Gear', question: 'Shackles and hooks with valid certificates?' },
+  1156→    ],
+  1157→    hazardous_cargo: [
+  1158→      { category: 'Documentation', question: 'Dangerous goods declaration received?' },
+  1159→      { category: 'Documentation', question: 'Material Safety Data Sheet (MSDS) available?' },
+  1160→      { category: 'Documentation', question: 'Proper shipping name and UN number verified?' },
+  1161→      { category: 'Segregation', question: 'Incompatible substances properly separated?' },
+  1162→      { category: 'Segregation', question: 'Stowage complies with IMDG code?' },
+  1163→      { category: 'PPE', question: 'Correct PPE for cargo type available?' },
+  1164→      { category: 'PPE', question: 'Spill containment equipment ready?' },
+  1165→      { category: 'Emergency', question: 'Emergency procedures posted and understood?' },
+  1166→    ],
+  1167→    crane_lift: [
+  1168→      { category: 'Pre-Lift', question: 'Lift plan prepared and communicated?' },
+  1169→      { category: 'Pre-Lift', question: 'Load weight verified and within crane capacity?' },
+  1170→      { category: 'Pre-Lift', question: 'Sling angle calculated (minimum 60 degrees)?' },
+  1171→      { category: 'Pre-Lift', question: 'Tag lines available and personnel assigned?' },
+  1172→      { category: 'Area', question: 'Exclusion zone established and barriers in place?' },
+  1173→      { category: 'Area', question: 'No personnel under suspended load?' },
+  1174→      { category: 'Communication', question: 'Signal person designated and visible?' },
+  1175→      { category: 'Communication', question: 'Radio communication tested?' },
+  1176→    ],
+  1177→  };
+  1178→  return templates[type] || templates.pre_shift;
+  1179→}
+  1180→
+  1181→// ============ TRUCK VISITS ============
+  1182→function TruckVisits() {
+  1183→  const { currentRole, currentUser } = useAppStore();
+  1184→  const [trucks, setTrucks] = useState<TruckVisit[]>([]);
+  1185→  const [newTruckDialog, setNewTruckDialog] = useState(false);
+  1186→  const [newTruck, setNewTruck] = useState({ driverName: '', truckPlate: '', trailerPlate: '', company: '', purpose: 'delivery', cargoDescription: '', bookingRef: '' });
+  1187→
+  1188→  const trucksLoadedRef = useRef(false);
+  1189→  const [, startTransitionTrucks] = useTransition();
+  1190→  const loadTrucks = useCallback(async () => {
+  1191→    const data = await fetch('/api/trucks').then(r => r.json());
+  1192→    startTransitionTrucks(() => { setTrucks(data); });
+  1193→  }, [startTransitionTrucks]);
+  1194→
+  1195→  useEffect(() => {
+  1196→    if (!trucksLoadedRef.current) {
+  1197→      trucksLoadedRef.current = true;
+  1198→      loadTrucks();
+  1199→    }
+  1200→  }, [loadTrucks]);
+  1201→
+  1202→  const createTruck = async () => {
+  1203→    await fetch('/api/trucks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...newTruck, status: 'expected', expectedArrival: new Date(Date.now() + 3600000).toISOString() }) });
+  1204→    setNewTruckDialog(false);
+  1205→    toast({ title: 'Truck Visit Registered' });
+  1206→    loadTrucks();
+  1207→  };
+  1208→
+  1209→  const advanceStatus = async (id: string, currentStatus: string) => {
+  1210→    const next: Record<string, string> = { expected: 'arrived', arrived: 'at_dock', at_dock: 'loading', loading: 'completed' };
+  1211→    const nextStatus = next[currentStatus];
+  1212→    if (!nextStatus) return;
+  1213→    const data: any = { id, status: nextStatus };
+  1214→    if (nextStatus === 'arrived') data.arrivedAt = new Date().toISOString();
+  1215→    if (nextStatus === 'at_dock') { data.dockAssignedAt = new Date().toISOString(); data.dockNumber = 'D' + Math.ceil(Math.random() * 8); }
+  1216→    if (nextStatus === 'completed') data.completedAt = new Date().toISOString();
+  1217→    await fetch('/api/trucks', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+  1218→    toast({ title: `Status: ${nextStatus.replace('_', ' ')}` });
+  1219→    loadTrucks();
+  1220→  };
+  1221→
+  1222→  const statusFlow: Record<string, string[]> = { expected: ['arrived'], arrived: ['at_dock'], at_dock: ['loading'], loading: ['completed'] };
+  1223→
+  1224→  return (
+  1225→    <div className="p-4 lg:p-6 space-y-4 max-w-4xl mx-auto">
+  1226→      <div className="flex items-center justify-between">
+  1227→        <h2 className="text-lg font-semibold">Truck Visits</h2>
+  1228→        <Dialog open={newTruckDialog} onOpenChange={setNewTruckDialog}>
+  1229→          <DialogTrigger asChild>
+  1230→            <Button className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
+  1231→              <Plus className="h-4 w-4 mr-2" /> Register Visit
+  1232→            </Button>
+  1233→          </DialogTrigger>
+  1234→          <DialogContent>
+  1235→            <DialogHeader><DialogTitle>Register Truck Visit</DialogTitle></DialogHeader>
+  1236→            <div className="space-y-4">
+  1237→              <div><Label>Driver Name</Label><Input placeholder="Full name" value={newTruck.driverName} onChange={(e) => setNewTruck(p => ({ ...p, driverName: e.target.value }))} /></div>
+  1238→              <div className="grid grid-cols-2 gap-4">
+  1239→                <div><Label>Truck Plate</Label><Input placeholder="1-ABC-123" value={newTruck.truckPlate} onChange={(e) => setNewTruck(p => ({ ...p, truckPlate: e.target.value }))} /></div>
+  1240→                <div><Label>Trailer Plate</Label><Input placeholder="1-XYZ-456" value={newTruck.trailerPlate} onChange={(e) => setNewTruck(p => ({ ...p, trailerPlate: e.target.value }))} /></div>
+  1241→              </div>
+  1242→              <div><Label>Company</Label><Input placeholder="Transport company" value={newTruck.company} onChange={(e) => setNewTruck(p => ({ ...p, company: e.target.value }))} /></div>
+  1243→              <div><Label>Purpose</Label>
+  1244→                <Select value={newTruck.purpose} onValueChange={(v) => setNewTruck(p => ({ ...p, purpose: v }))}>
+  1245→                  <SelectTrigger><SelectValue /></SelectTrigger>
+  1246→                  <SelectContent><SelectItem value="delivery">Delivery</SelectItem><SelectItem value="pickup">Pickup</SelectItem><SelectItem value="both">Both</SelectItem></SelectContent>
+  1247→                </Select>
+  1248→              </div>
+  1249→              <div><Label>Cargo Description</Label><Textarea placeholder="What cargo..." value={newTruck.cargoDescription} onChange={(e) => setNewTruck(p => ({ ...p, cargoDescription: e.target.value }))} /></div>
+  1250→              <div><Label>Booking Reference</Label><Input placeholder="BK-2026-XXXX" value={newTruck.bookingRef} onChange={(e) => setNewTruck(p => ({ ...p, bookingRef: e.target.value }))} /></div>
+  1251→            </div>
+  1252→            <DialogFooter><Button onClick={createTruck} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">Register</Button></DialogFooter>
+  1253→          </DialogContent>
+  1254→        </Dialog>
+  1255→      </div>
+  1256→
+  1257→      <div className="grid gap-4">
+  1258→        {trucks.map(tv => (
+  1259→          <Card key={tv.id}>
+  1260→            <CardContent className="p-4">
+  1261→              <div className="flex items-start gap-4">
+  1262→                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+  1263→                  tv.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30 text-green-600' :
+  1264→                  tv.status === 'at_dock' || tv.status === 'loading' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' :
+  1265→                  'bg-amber-100 dark:bg-amber-900/30 text-amber-600'
+  1266→                }`}>
+  1267→                  <Truck className="h-6 w-6" />
+  1268→                </div>
+  1269→                <div className="flex-1 min-w-0">
+  1270→                  <div className="flex items-center gap-2">
+  1271→                    <h3 className="font-semibold text-sm">{tv.driverName}</h3>
+  1272→                    <Badge className={statusColors[tv.status] || ''} variant="outline">{tv.status.replace('_', ' ')}</Badge>
+  1273→                  </div>
+  1274→                  <p className="text-sm text-muted-foreground">{tv.truckPlate} {tv.trailerPlate && `/ ${tv.trailerPlate}`} — {tv.company}</p>
+  1275→                  <p className="text-sm text-muted-foreground">{tv.purpose} — {tv.cargoDescription}</p>
+  1276→                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+  1277→                    {tv.dockNumber && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> Dock {tv.dockNumber}</span>}
+  1278→                    {tv.bookingRef && <span>{tv.bookingRef}</span>}
+  1279→                    {tv.expectedArrival && <span>ETA: {formatTime(tv.expectedArrival)}</span>}
+  1280→                  </div>
+  1281→                </div>
+  1282→                <div className="shrink-0">
+  1283→                  {statusFlow[tv.status] && (
+  1284→                    <Button size="sm" onClick={() => advanceStatus(tv.id, tv.status)} className="bg-blue-500 hover:bg-blue-600 text-white">
+  1285→                      <ArrowRight className="h-4 w-4 mr-1" /> {statusFlow[tv.status][0].replace('_', ' ')}
+  1286→                    </Button>
+  1287→                  )}
+  1288→                </div>
+  1289→              </div>
+  1290→            </CardContent>
+  1291→          </Card>
+  1292→        ))}
+  1293→      </div>
+  1294→    </div>
+  1295→  );
+  1296→}
+  1297→
+  1298→// ============ WAREHOUSES ============
+  1299→function WarehouseView() {
+  1300→  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  1301→  const [selectedWh, setSelectedWh] = useState<Warehouse | null>(null);
+  1302→
+  1303→  useEffect(() => {
+  1304→    fetch('/api/warehouses').then(r => r.json()).then(setWarehouses);
+  1305→  }, []);
+  1306→
+  1307→  const typeLabels: Record<string, string> = { general: 'General', cold: 'Cold Storage', hazardous: 'Hazardous', bulk: 'Bulk' };
+  1308→  const typeColors: Record<string, string> = { general: 'from-blue-500 to-cyan-500', cold: 'from-cyan-500 to-blue-600', hazardous: 'from-red-500 to-orange-500', bulk: 'from-amber-500 to-yellow-500' };
+  1309→
+  1310→  return (
+  1311→    <div className="p-4 lg:p-6 space-y-4 max-w-6xl mx-auto">
+  1312→      <h2 className="text-lg font-semibold">Warehouses & Storage</h2>
+  1313→
+  1314→      {selectedWh ? (
+  1315→        <Card>
+  1316→          <CardHeader>
+  1317→            <div className="flex items-center justify-between">
+  1318→              <div>
+  1319→                <CardTitle>{selectedWh.name}</CardTitle>
+  1320→                <CardDescription>{selectedWh.code} — {selectedWh.location} — {typeLabels[selectedWh.type]}</CardDescription>
+  1321→              </div>
+  1322→              <Button variant="ghost" size="sm" onClick={() => setSelectedWh(null)}><ArrowLeft className="h-4 w-4 mr-1" /> Back</Button>
+  1323→            </div>
+  1324→          </CardHeader>
+  1325→          <CardContent>
+  1326→            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+  1327→              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">Type</p><p className="font-semibold">{typeLabels[selectedWh.type]}</p></div>
+  1328→              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">Capacity</p><p className="font-semibold">{selectedWh.capacity?.toLocaleString() || '-'} slots</p></div>
+  1329→              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">Area</p><p className="font-semibold">{selectedWh.area?.toLocaleString() || '-'} m²</p></div>
+  1330→            </div>
+  1331→            <h4 className="font-semibold text-sm mb-3">Storage Locations</h4>
+  1332→            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+  1333→              {selectedWh.storageLocations?.map((loc: any) => (
+  1334→                <div key={loc.id} className={`p-2 rounded-lg border text-center text-xs ${
+  1335→                  loc.occupied ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700' : 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
+  1336→                }`}>
+  1337→                  <p className="font-bold">{loc.zone}-{loc.row}-{loc.bay}</p>
+  1338→                  <p className="text-muted-foreground text-[10px]">{loc.occupied ? loc.cargoRef || 'Occupied' : 'Free'}</p>
+  1339→                </div>
+  1340→              ))}
+  1341→            </div>
+  1342→          </CardContent>
+  1343→        </Card>
+  1344→      ) : (
+  1345→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  1346→          {warehouses.map(wh => {
+  1347→            const total = wh.storageLocations?.length || 0;
+  1348→            const occupied = wh.storageLocations?.filter((l: any) => l.occupied).length || 0;
+  1349→            const pct = total > 0 ? Math.round((occupied / total) * 100) : 0;
+  1350→            return (
+  1351→              <Card key={wh.id} className="hover:shadow-md transition-shadow cursor-pointer overflow-hidden" onClick={() => setSelectedWh(wh)}>
+  1352→                <div className={`h-2 bg-gradient-to-r ${typeColors[wh.type] || 'from-slate-500 to-slate-600'}`} />
+  1353→                <CardContent className="p-4">
+  1354→                  <div className="flex items-center gap-2 mb-2">
+  1355→                    <Badge variant="outline">{wh.code}</Badge>
+  1356→                    <span className="text-xs text-muted-foreground capitalize">{typeLabels[wh.type]}</span>
+  1357→                  </div>
+  1358→                  <h3 className="font-semibold">{wh.name}</h3>
+  1359→                  <p className="text-sm text-muted-foreground">{wh.location}</p>
+  1360→                  <div className="mt-3">
+  1361→                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+  1362→                      <span>{occupied}/{total} slots occupied</span>
+  1363→                      <span>{pct}%</span>
+  1364→                    </div>
+  1365→                    <Progress value={pct} className="h-2" />
+  1366→                  </div>
+  1367→                  {wh.area && <p className="text-xs text-muted-foreground mt-2">{wh.area.toLocaleString()} m²</p>}
+  1368→                </CardContent>
+  1369→              </Card>
+  1370→            );
+  1371→          })}
+  1372→        </div>
+  1373→      )}
+  1374→    </div>
+  1375→  );
+  1376→}
+  1377→
+  1378→// ============ NOTIFICATIONS ============
+  1379→function NotificationsView() {
+  1380→  const [notifs, setNotifs] = useState<Notification[]>([]);
+  1381→
+  1382→  const notifsLoadedRef = useRef(false);
+  1383→  const [, startTransitionNotifs] = useTransition();
+  1384→  const loadNotifs = useCallback(async () => {
+  1385→    const data = await fetch('/api/notifications').then(r => r.json());
+  1386→    startTransitionNotifs(() => { setNotifs(data); });
+  1387→  }, [startTransitionNotifs]);
+  1388→
+  1389→  useEffect(() => {
+  1390→    if (!notifsLoadedRef.current) {
+  1391→      notifsLoadedRef.current = true;
+  1392→      loadNotifs();
+  1393→    }
+  1394→  }, [loadNotifs]);
+  1395→
+  1396→  const markRead = async (id: string) => {
+  1397→    await fetch('/api/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, read: true }) });
+  1398→    loadNotifs();
+  1399→  };
+  1400→
+  1401→  const markAllRead = async () => {
+  1402→    for (const n of notifs.filter(n => !n.read)) {
+  1403→      await fetch('/api/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: n.id, read: true }) });
+  1404→    }
+  1405→    loadNotifs();
+  1406→    toast({ title: 'All marked as read' });
+  1407→  };
+  1408→
+  1409→  return (
+  1410→    <div className="p-4 lg:p-6 space-y-4 max-w-4xl mx-auto">
+  1411→      <div className="flex items-center justify-between">
+  1412→        <h2 className="text-lg font-semibold">Notifications</h2>
+  1413→        <Button variant="outline" size="sm" onClick={markAllRead}><CheckCheck className="h-4 w-4 mr-2" /> Mark All Read</Button>
+  1414→      </div>
+  1415→      <div className="space-y-3">
+  1416→        {notifs.map(n => (
+  1417→          <Card key={n.id} className={`transition-all ${n.read ? 'opacity-60' : 'shadow-md'}`}>
+  1418→            <CardContent className="p-4">
+  1419→              <div className="flex items-start gap-3">
+  1420→                <div className="mt-0.5 shrink-0">{notifIcons[n.type] || <Info className="h-4 w-4" />}</div>
+  1421→                <div className="flex-1 min-w-0">
+  1422→                  <div className="flex items-center gap-2">
+  1423→                    <h3 className="font-semibold text-sm">{n.title}</h3>
+  1424→                    {n.category && <Badge variant="outline" className="text-xs">{n.category}</Badge>}
+  1425→                  </div>
+  1426→                  <p className="text-sm text-muted-foreground mt-1">{n.message}</p>
+  1427→                  <p className="text-xs text-muted-foreground mt-2">{timeSince(n.createdAt)} ago</p>
+  1428→                </div>
+  1429→                {!n.read && <Button variant="ghost" size="sm" onClick={() => markRead(n.id)}><Eye className="h-4 w-4" /></Button>}
+  1430→              </div>
+  1431→            </CardContent>
+  1432→          </Card>
+  1433→        ))}
+  1434→      </div>
+  1435→    </div>
+  1436→  );
+  1437→}
+  1438→
+  1439→// ============ REPORTS ============
+  1440→function ReportsView() {
+  1441→  const [stats, setStats] = useState<Stats | null>(null);
+  1442→
+  1443→  useEffect(() => { fetch('/api/stats').then(r => r.json()).then(setStats); }, []);
+  1444→  if (!stats) return <div className="p-6"><p>Loading...</p></div>;
+  1445→
+  1446→  const reportCards = [
+  1447→    { title: 'Shifts', data: [{ label: 'Active', value: stats.activeShifts }] },
+  1448→    { title: 'Cargo', data: [{ label: 'Pending', value: stats.pendingCargo }, { label: 'In Progress', value: stats.inProgressCargo }, { label: 'Completed', value: stats.completedCargo }] },
+  1449→    { title: 'Trucks', data: [{ label: 'Expected', value: stats.expectedTrucks }, { label: 'At Dock', value: stats.atDockTrucks }] },
+  1450→    { title: 'Documents', data: [{ label: 'Pending Review', value: stats.pendingDocs }] },
+  1451→    { title: 'Safety', data: [{ label: 'Active Checks', value: stats.activeSafetyChecks }] },
+  1452→    { title: 'Personnel', data: [{ label: 'Workers', value: stats.totalWorkers }, { label: 'Chauffeurs', value: stats.totalChauffeurs }] },
+  1453→  ];
+  1454→
+  1455→  return (
+  1456→    <div className="p-4 lg:p-6 space-y-6 max-w-6xl mx-auto">
+  1457→      <h2 className="text-lg font-semibold">Reports & Analytics</h2>
+  1458→      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+  1459→        {reportCards.map((rc, i) => (
+  1460→          <Card key={i}>
+  1461→            <CardHeader className="pb-2"><CardTitle className="text-base">{rc.title}</CardTitle></CardHeader>
+  1462→            <CardContent>
+  1463→              <div className="space-y-2">
+  1464→                {rc.data.map((d, j) => (
+  1465→                  <div key={j} className="flex justify-between items-center">
+  1466→                    <span className="text-sm text-muted-foreground">{d.label}</span>
+  1467→                    <span className="font-bold text-lg">{d.value}</span>
+  1468→                  </div>
+  1469→                ))}
+  1470→              </div>
+  1471→            </CardContent>
+  1472→          </Card>
+  1473→        ))}
+  1474→      </div>
+  1475→
+  1476→      <Card>
+  1477→        <CardHeader><CardTitle className="text-base">Warehouse Occupancy Report</CardTitle></CardHeader>
+  1478→        <CardContent>
+  1479→          <div className="space-y-4">
+  1480→            {stats.warehouses.map((wh: any) => {
+  1481→              const pct = wh.totalSlots > 0 ? Math.round((wh.occupiedSlots / wh.totalSlots) * 100) : 0;
+  1482→              return (
+  1483→                <div key={wh.id}>
+  1484→                  <div className="flex justify-between text-sm mb-1">
+  1485→                    <span className="font-medium">{wh.name} ({wh.code})</span>
+  1486→                    <span className="text-muted-foreground">{wh.occupiedSlots}/{wh.totalSlots} — {pct}%</span>
+  1487→                  </div>
+  1488→                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4">
+  1489→                    <div className={`h-4 rounded-full ${pct > 80 ? 'bg-red-500' : pct > 50 ? 'bg-amber-500' : 'bg-green-500'}`} style={{ width: `${pct}%` }} />
+  1490→                  </div>
+  1491→                </div>
+  1492→              );
+  1493→            })}
+  1494→          </div>
+  1495→        </CardContent>
+  1496→      </Card>
+  1497→    </div>
+  1498→  );
+  1499→}
+  1500→
+  1501→// ============ MAIN APP ============
+  1502→function MainApp() {
+  1503→  const { currentView } = useAppStore();
+  1504→
+  1505→  const viewMap: Record<AppView, React.ReactNode> = {
+  1506→    dashboard: <Dashboard />,
+  1507→    shifts: <ShiftManagement />,
+  1508→    cargo: <CargoOperations />,
+  1509→    documents: <DocumentManagement />,
+  1510→    safety: <SafetyChecklists />,
+  1511→    trucks: <TruckVisits />,
+  1512→    warehouses: <WarehouseView />,
+  1513→    notifications: <NotificationsView />,
+  1514→    reports: <ReportsView />,
+  1515→  };
+  1516→
+  1517→  return (
+  1518→    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+  1519→      <SidebarNav />
+  1520→      <div className="lg:ml-72">
+  1521→        <TopBar />
+  1522→        <main className="pb-8">
+  1523→          {viewMap[currentView]}
+  1524→        </main>
+  1525→      </div>
+  1526→    </div>
+  1527→  );
+  1528→}
+  1529→
+  1530→// ============ PAGE EXPORT ============
+  1531→export default function Page() {
+  1532→  const { currentUser } = useAppStore();
+  1533→
+  1534→  return (
+  1535→    <>
+  1536→      {currentUser ? <MainApp /> : <LoginScreen />}
+  1537→      <Toaster />
+  1538→    </>
+  1539→  );
+  1540→}
+  1541→

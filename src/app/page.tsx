@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, useTransition, useCallback } from 'react';
 import { useAppStore, UserRole, AppView } from '@/lib/store';
+import { signIn } from 'next-auth/react';
 import {
   Ship, Truck, FileText, Shield, Clock, Warehouse, Bell, BarChart3,
   LogOut, Menu, X, ChevronRight, Package, CheckCircle2, AlertTriangle,
@@ -86,6 +87,10 @@ function LoginScreen() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
   const fetchUsers = useCallback(async () => {
     const res = await fetch('/api/users');
@@ -108,8 +113,37 @@ function LoginScreen() {
 
   const loginAs = async (user: any) => {
     setLoading(true);
+    // Sign in via NextAuth for session persistence
+    await signIn('credentials', { email: user.email, password: 'demo123', redirect: false });
     setCurrentUser(user);
     setCurrentRole(user.role as UserRole);
+    setLoading(false);
+  };
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setLoginError('');
+    
+    // Authenticate via NextAuth
+    const result = await signIn('credentials', { email, password, redirect: false });
+    
+    if (result?.ok) {
+      // Fetch user data from our API
+      const usersRes = await fetch('/api/users');
+      if (usersRes.ok) {
+        const allUsers = await usersRes.json();
+        const user = allUsers.find((u: any) => u.email === email);
+        if (user) {
+          setCurrentUser(user);
+          setCurrentRole(user.role as UserRole);
+        } else {
+          setLoginError('User not found');
+        }
+      }
+    } else {
+      setLoginError('Invalid email or password');
+    }
     setLoading(false);
   };
 
@@ -141,24 +175,52 @@ function LoginScreen() {
           <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
             <CardHeader className="text-center">
               <CardTitle className="text-white">Sign In</CardTitle>
-              <CardDescription className="text-slate-400">Choose your profile to continue</CardDescription>
+              <CardDescription className="text-slate-400">
+                {showEmailLogin ? 'Enter your credentials' : 'Choose your profile to continue'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {users.map((user) => (
-                <button key={user.id} onClick={() => loginAs(user)} disabled={loading}
-                  className="w-full flex items-center gap-4 p-4 rounded-xl border border-slate-600 bg-slate-700/50 hover:bg-slate-700 hover:border-amber-500/50 transition-all duration-200 text-left group">
-                  <Avatar className="h-12 w-12 border-2 border-slate-500 group-hover:border-amber-500 transition-colors">
-                    <AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-600 text-white font-bold">
-                      {user.name.split(' ').map((n: string) => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-white font-semibold">{user.name}</p>
-                    <p className="text-slate-400 text-sm">{user.badge} — {user.role === 'dock_worker' ? 'Dock Worker' : user.role === 'chauffeur' ? 'Chauffeur' : 'Admin'}</p>
+              {showEmailLogin ? (
+                <form onSubmit={handleEmailLogin} className="space-y-4">
+                  <div>
+                    <Label className="text-slate-300">Email</Label>
+                    <Input type="email" placeholder="worker1@steinweg.be" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-slate-700 border-slate-600 text-white" required />
                   </div>
-                  <ChevronRight className="h-5 w-5 text-slate-500 group-hover:text-amber-500 transition-colors" />
-                </button>
-              ))}
+                  <div>
+                    <Label className="text-slate-300">Password</Label>
+                    <Input type="password" placeholder="••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-slate-700 border-slate-600 text-white" required />
+                  </div>
+                  {loginError && <p className="text-red-400 text-sm">{loginError}</p>}
+                  <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white">
+                    {loading ? 'Signing in...' : 'Sign In'}
+                  </Button>
+                  <button type="button" onClick={() => setShowEmailLogin(false)} className="w-full text-center text-slate-400 hover:text-amber-400 text-sm">
+                    ← Back to profiles
+                  </button>
+                </form>
+              ) : (
+                <>
+                  {users.map((user) => (
+                    <button key={user.id} onClick={() => loginAs(user)} disabled={loading}
+                      className="w-full flex items-center gap-4 p-4 rounded-xl border border-slate-600 bg-slate-700/50 hover:bg-slate-700 hover:border-amber-500/50 transition-all duration-200 text-left group">
+                      <Avatar className="h-12 w-12 border-2 border-slate-500 group-hover:border-amber-500 transition-colors">
+                        <AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-600 text-white font-bold">
+                          {user.name.split(' ').map((n: string) => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="text-white font-semibold">{user.name}</p>
+                        <p className="text-slate-400 text-sm">{user.badge} — {user.role === 'dock_worker' ? 'Dock Worker' : user.role === 'chauffeur' ? 'Chauffeur' : 'Admin'}</p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-slate-500 group-hover:text-amber-500 transition-colors" />
+                    </button>
+                  ))}
+                  <Separator className="bg-slate-600" />
+                  <button onClick={() => setShowEmailLogin(true)} className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-slate-600 text-slate-400 hover:text-white hover:border-amber-500/50 transition-all text-sm">
+                    <User className="h-4 w-4" /> Sign in with email & password
+                  </button>
+                </>
+              )}
             </CardContent>
           </Card>
         )}
@@ -814,6 +876,8 @@ function DocumentManagement() {
   const [newDocDialog, setNewDocDialog] = useState(false);
   const [newDoc, setNewDoc] = useState({ docType: 'bill_of_lading', reference: '', notes: '' });
   const [viewDoc, setViewDoc] = useState<Document | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const [, startTransitionDocs] = useTransition();
   const loadDocs = useCallback(async () => {
@@ -828,10 +892,37 @@ function DocumentManagement() {
   }, [loadDocs]);
 
   const createDoc = async () => {
-    await fetch('/api/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...newDoc, status: 'draft' }) });
+    const docData: any = { ...newDoc, status: 'draft' };
+    if (photos.length > 0) docData.photos = JSON.stringify(photos);
+    await fetch('/api/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(docData) });
     setNewDocDialog(false);
+    setPhotos([]);
     toast({ title: 'Document Created' });
     loadDocs();
+  };
+
+  const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    for (const file of Array.from(files)) {
+      const formData = new FormData();
+      formData.append('photo', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        setPhotos(prev => [...prev, data.url]);
+        toast({ title: 'Photo added', description: file.name });
+      } else {
+        toast({ title: 'Upload failed', description: file.name, variant: 'destructive' });
+      }
+    }
+    setUploading(false);
+    e.target.value = '';
+  };
+
+  const removePhoto = (url: string) => {
+    setPhotos(prev => prev.filter(p => p !== url));
   };
 
   const signDoc = async (docId: string) => {
@@ -914,6 +1005,19 @@ function DocumentManagement() {
                     )); } catch { return <p className="col-span-2 text-sm text-muted-foreground">{doc.content}</p>; } })()}
                   </div>
                   {doc.notes && <p className="text-sm text-muted-foreground mt-3 italic">Notes: {doc.notes}</p>}
+                  {/* Display attached photos */}
+                  {doc.photos && (() => { try { const photoUrls: string[] = JSON.parse(doc.photos); return photoUrls.length > 0 ? (
+                    <div className="mt-3">
+                      <h5 className="text-xs font-medium text-muted-foreground mb-2">Attached Photos</h5>
+                      <div className="grid grid-cols-3 gap-2">
+                        {photoUrls.map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                            <img src={url} alt={`Photo ${i+1}`} className="w-full h-24 object-cover rounded-lg border hover:opacity-80 transition-opacity" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null; } catch { return null; } })()}
                 </div>
               )}
             </CardContent>
@@ -935,6 +1039,30 @@ function DocumentManagement() {
             </div>
             <div><Label>Reference Number</Label><Input placeholder="e.g. BL-ANT-2026-5521" value={newDoc.reference} onChange={(e) => setNewDoc(p => ({ ...p, reference: e.target.value }))} /></div>
             <div><Label>Notes</Label><Textarea placeholder="Additional notes..." value={newDoc.notes} onChange={(e) => setNewDoc(p => ({ ...p, notes: e.target.value }))} /></div>
+            
+            {/* Photo Capture Section */}
+            <div>
+              <Label className="flex items-center gap-2"><Camera className="h-4 w-4" /> Attach Photos</Label>
+              <div className="mt-2 flex items-center gap-3">
+                <label className="cursor-pointer flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
+                  <Camera className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">{uploading ? 'Uploading...' : 'Take Photo / Upload'}</span>
+                  <input type="file" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment" multiple className="hidden" onChange={handlePhotoCapture} disabled={uploading} />
+                </label>
+              </div>
+              {photos.length > 0 && (
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {photos.map((url, i) => (
+                    <div key={i} className="relative group">
+                      <img src={url} alt={`Photo ${i+1}`} className="w-full h-24 object-cover rounded-lg border" />
+                      <button onClick={() => removePhoto(url)} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter><Button onClick={createDoc} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">Create Document</Button></DialogFooter>
         </DialogContent>
