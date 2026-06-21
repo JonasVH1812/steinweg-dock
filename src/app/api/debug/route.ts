@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/pg-db';
+import { getClient } from '@/lib/pg-db';
 
 export async function GET() {
   const results: Record<string, unknown> = {};
@@ -7,19 +7,19 @@ export async function GET() {
   results.databaseUrlSet = !!process.env.DATABASE_URL;
   results.databaseUrlPrefix = process.env.DATABASE_URL?.substring(0, 40) + '...' || 'NOT SET';
   results.nodeEnv = process.env.NODE_ENV;
+  results.nextauthSecretSet = !!process.env.NEXTAUTH_SECRET;
 
   if (!process.env.DATABASE_URL) {
-    results.error = 'DATABASE_URL is not set!';
+    results.error = 'DATABASE_URL is not set! Add it in Vercel Settings > Environment Variables.';
     return NextResponse.json(results, { status: 200 });
   }
 
-  const client = await pool.connect().catch(err => {
+  let client;
+  try {
+    client = await getClient();
+  } catch (err: unknown) {
     results.connected = false;
-    results.error = err.message;
-    return null;
-  });
-
-  if (!client) {
+    results.error = err instanceof Error ? err.message : String(err);
     return NextResponse.json(results, { status: 200 });
   }
 

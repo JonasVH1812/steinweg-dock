@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { pool, generateId } from '@/lib/pg-db';
+import { getClient, generateId } from '@/lib/pg-db';
 
 export async function POST() {
-  const client = await pool.connect();
+  const client = await getClient();
   try {
     await client.query('BEGIN');
 
