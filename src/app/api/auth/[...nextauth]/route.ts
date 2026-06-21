@@ -1,6 +1,6 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { db } from '@/lib/db';
+import { queryOne } from '@/lib/pg-db';
 
 export const authOptions = {
   providers: [
@@ -15,9 +15,10 @@ export const authOptions = {
           return null;
         }
 
-        const user = await db.user.findUnique({
-          where: { email: credentials.email },
-        });
+        const user = await queryOne(
+          'SELECT * FROM "User" WHERE "email" = $1',
+          [credentials.email]
+        );
 
         if (!user || !user.active) {
           return null;

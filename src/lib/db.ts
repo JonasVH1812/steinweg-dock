@@ -1,13 +1,5 @@
-import { PrismaClient } from '@prisma/client'
+// This file exports the pg pool as the primary database connection.
+// Prisma is kept only for schema generation during build time.
+// All runtime queries use the pg pool directly via @/lib/pg-db
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-export const db =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  })
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
+export { pool, query, queryOne, generateId } from './pg-db';
