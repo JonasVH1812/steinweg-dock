@@ -106,7 +106,7 @@ function LoginScreen() {
 
   const seedDb = async () => {
     setSeedLoading(true);
-    const res = await fetch('/api/seed', { method: 'POST' });
+    const res = await fetch('/api/setup', { method: 'POST' });
     if (res.ok) { setSeeded(true); await fetchUsers(); toast({ title: 'Database seeded', description: 'Demo data loaded successfully' }); }
     setSeedLoading(false);
   };
