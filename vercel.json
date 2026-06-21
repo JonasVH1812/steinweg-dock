@@ -2,5 +2,5 @@
   "buildCommand": "prisma generate && next build",
   "installCommand": "bun install",
   "framework": "nextjs",
-  "regions": ["bru1"]
+  "regions": ["cdg1"]
 }
