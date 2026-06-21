@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("dock_worker") // dock_worker, chauffeur, admin
+  badge     String?  // Employee badge number
+  phone     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shifts       Shift[]
+  cargoOps     CargoOperation[]
+  signatures   Signature[]
+  safetyChecks SafetyChecklist[]
+}
+
+model Shift {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   @default("day") // day, night
+  status    String   @default("active") // active, break, ended
+  checkIn   DateTime @default(now())
+  checkOut  DateTime?
+  location  String?  // Which dock/warehouse
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CargoOperation {
+  id           String   @id @default(cuid())
+  operationType String  // loading, unloading, tally, transfer
+  status       String   @default("pending") // pending, in_progress, completed, cancelled
+  vesselName   String?
+  voyageNumber String?
+  berthNumber  String?
+  warehouseId  String?
+  warehouse    Warehouse? @relation(fields: [warehouseId], references: [id])
+  cargoType    String?  // breakbulk, container, roro, bulk
+  reference    String?  // BL or manifest reference
+  weight       Float?
+  unitCount    Int?
+  description  String?
+  assignedTo   String?
+  assignee     User?    @relation(fields: [assignedTo], references: [id])
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items        CargoItem[]
+  documents    Document[]
+}
+
+model CargoItem {
+  id              String          @id @default(cuid())
+  cargoOpId       String
+  cargoOperation  CargoOperation  @relation(fields: [cargoOpId], references: [id])
+  itemType        String          // container, pallet, bag, drum, bundle, vehicle
+  markOrNumber    String?
+  description     String?
+  quantity        Int             @default(1)
+  weight          Float?
+  condition       String          @default("good") // good, damaged, wet, missing
+  damageNotes     String?
+  storageLocation String?
+  checked         Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Warehouse {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  location    String?
+  type        String   @default("general") // general, cold, hazardous, bulk
+  capacity    Int?
+  area        Float?   // sqm
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cargoOperations CargoOperation[]
+  storageLocations StorageLocation[]
+}
+
+model StorageLocation {
+  id          String    @id @default(cuid())
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  zone        String    // A, B, C, etc.
+  row         String?
+  bay         String?
+  level       String?
+  occupied    Boolean   @default(false)
+  cargoRef    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Document {
+  id            String          @id @default(cuid())
+  docType       String          // bill_of_lading, delivery_note, damage_report, customs, packing_list, weigh_bridge
+  reference     String
+  status        String          @default("draft") // draft, pending_review, approved, signed, archived
+  cargoOpId     String?
+  cargoOperation CargoOperation? @relation(fields: [cargoOpId], references: [id])
+  truckVisitId  String?
+  truckVisit    TruckVisit?     @relation(fields: [truckVisitId], references: [id])
+  content       String?         // JSON string with document fields
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  signatures Signature[]
+}
+
+model Signature {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id])
+  signedBy   String
+  signer     User     @relation(fields: [signedBy], references: [id])
+  signerRole String?  // dock_worker, chauffeur, supervisor
+  signedAt   DateTime @default(now())
+}
+
+model SafetyChecklist {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  checkType   String   // pre_shift, dock_safety, equipment, hazardous_cargo, crane_lift
+  status      String   @default("pending") // pending, in_progress, completed, failed
+  location    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items SafetyCheckItem[]
+}
+
+model SafetyCheckItem {
+  id            String          @id @default(cuid())
+  checklistId   String
+  checklist     SafetyChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  category      String
+  question      String
+  passed        Boolean?
+  notes         String?
+  orderIndex    Int             @default(0)
+}
+
+model TruckVisit {
+  id              String     @id @default(cuid())
+  driverName      String
+  driverLicense   String?
+  company         String?
+  truckPlate      String
+  trailerPlate    String?
+  purpose         String     // delivery, pickup, both
+  status          String     @default("expected") // expected, arrived, at_dock, loading, completed, cancelled
+  dockNumber      String?
+  expectedArrival DateTime?
+  arrivedAt       DateTime?
+  dockAssignedAt  DateTime?
+  completedAt     DateTime?
+  cargoDescription String?
+  blReference     String?
+  bookingRef      String?
+  notes           String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  documents Document[]
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  type      String   // info, warning, urgent, task
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  category  String?  // shift, cargo, safety, truck, document
+  linkId    String?  // Reference to related entity
+  createdAt DateTime @default(now())
+}
