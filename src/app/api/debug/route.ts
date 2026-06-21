@@ -4,12 +4,22 @@ import { getClient } from '@/lib/pg-db';
 export async function GET() {
   const results: Record<string, unknown> = {};
 
-  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  const connectionString =
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL;
   results.databaseUrlSet = !!connectionString;
-  results.usingUrl = process.env.POSTGRES_URL ? 'POSTGRES_URL' : (process.env.DATABASE_URL ? 'DATABASE_URL' : 'NONE');
+  results.usingUrl = process.env.POSTGRES_URL_NON_POOLING
+    ? 'POSTGRES_URL_NON_POOLING'
+    : process.env.POSTGRES_URL
+      ? 'POSTGRES_URL'
+      : process.env.DATABASE_URL
+        ? 'DATABASE_URL'
+        : 'NONE';
   results.databaseUrlPrefix = connectionString?.substring(0, 50) + '...' || 'NOT SET';
   results.nodeEnv = process.env.NODE_ENV;
   results.nextauthSecretSet = !!process.env.NEXTAUTH_SECRET;
+  results.postgresUrlNonPoolingSet = !!process.env.POSTGRES_URL_NON_POOLING;
   results.postgresUrlSet = !!process.env.POSTGRES_URL;
 
   if (!connectionString) {

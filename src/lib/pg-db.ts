@@ -15,8 +15,14 @@ function getPool(): Pool {
     return _pool;
   }
 
-  // Try POSTGRES_URL first (set by Vercel-Supabase integration), then DATABASE_URL
-  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  // Prefer POSTGRES_URL_NON_POOLING (direct connection, proper SSL cert)
+  // Then POSTGRES_URL (pooler, self-signed cert)
+  // Then DATABASE_URL (user-set)
+  const connectionString =
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL;
+
   if (!connectionString) {
     throw new Error(
       'No database connection string found! Set POSTGRES_URL or DATABASE_URL in Vercel Environment Variables.'
@@ -25,7 +31,11 @@ function getPool(): Pool {
 
   const config: PoolConfig = {
     connectionString,
-    ssl: { rejectUnauthorized: false }, // Required for Supabase
+    // Supabase pooler uses self-signed certs — bypass certificate verification
+    ssl: {
+      rejectUnauthorized: false,
+      checkServerIdentity: () => undefined,
+    },
     max: 5,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
