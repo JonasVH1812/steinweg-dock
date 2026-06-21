@@ -1,3 +1,8 @@
+// Supabase uses self-signed certificates that Node.js rejects by default.
+// This must be set BEFORE any TLS connection is made.
+// Safe for this app: only used for database connections, not user-facing HTTPS.
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 import { Pool, PoolConfig } from 'pg';
 
 const globalForPg = globalThis as unknown as {
@@ -31,11 +36,7 @@ function getPool(): Pool {
 
   const config: PoolConfig = {
     connectionString,
-    // Supabase pooler uses self-signed certs — bypass certificate verification
-    ssl: {
-      rejectUnauthorized: false,
-      checkServerIdentity: () => undefined,
-    },
+    ssl: { rejectUnauthorized: false },
     max: 5,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
