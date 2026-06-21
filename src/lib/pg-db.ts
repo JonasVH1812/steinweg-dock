@@ -15,16 +15,16 @@ function getPool(): Pool {
     return _pool;
   }
 
-  if (!process.env.DATABASE_URL) {
+  // Try POSTGRES_URL first (set by Vercel-Supabase integration), then DATABASE_URL
+  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  if (!connectionString) {
     throw new Error(
-      'DATABASE_URL environment variable is not set! ' +
-      'Go to Vercel Dashboard → Settings → Environment Variables and add: ' +
-      'DATABASE_URL=postgresql://postgres:PASSWORD@db.HOST.supabase.co:5432/postgres'
+      'No database connection string found! Set POSTGRES_URL or DATABASE_URL in Vercel Environment Variables.'
     );
   }
 
   const config: PoolConfig = {
-    connectionString: process.env.DATABASE_URL,
+    connectionString,
     ssl: { rejectUnauthorized: false }, // Required for Supabase
     max: 5,
     idleTimeoutMillis: 30000,
