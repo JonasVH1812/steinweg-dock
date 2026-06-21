@@ -51,3 +51,36 @@ Stage Summary:
 - Photo capture working for damage reports
 - Deployment-ready for Vercel free tier
 - All features browser-verified and lint-clean
+
+---
+Task ID: 3
+Agent: Super Z (Main)
+Task: Vercel deployment prep, iPhone PWA optimization, production database setup
+
+Work Log:
+- Created .gitignore for clean git repo
+- Initialized git repo with initial commit
+- Created vercel.json with build commands, Brussels region, env var references
+- Created pre-deploy.sh script (prisma generate + lint checks)
+- Added seed guard to /api/seed (skips if users already exist)
+- Added Prisma migration setup with initial migration
+- Installed @prisma/adapter-pg, pg, @types/pg for PostgreSQL support
+- Created db-config.ts helper for SQLite/PostgreSQL detection
+- Created setup-postgres.sh with step-by-step instructions
+- Created seed-prod.js for production database seeding
+- Added vercel-build, db:migrate:prod, db:seed:prod scripts to package.json
+- Created service worker (sw.js) with cache-first for static, network-first for API, offline fallback
+- Registered service worker in pwa-install-prompt.tsx
+- Created PWAInstallBanner component with iOS step-by-step install guide (numbered circles)
+- Updated manifest.json with orientation "any" and shortcuts (Check In, Cargo Ops)
+- Added PWAInstallBanner to layout.tsx
+- All browser-verified: login, all 7 sections, photo capture, PWA features, service worker, manifest
+
+Stage Summary:
+- Git repo ready for GitHub push → Vercel import
+- Service worker enables offline access to cached data
+- iOS install banner with visual step-by-step guide
+- Manifest has quick-action shortcuts for Check In and Cargo Ops
+- PostgreSQL-ready: just change provider + set DATABASE_URL
+- Free DB options documented: Vercel Postgres, Supabase, Neon
+- Production seed script creates admin user securely
