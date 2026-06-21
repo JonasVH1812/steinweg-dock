@@ -6,7 +6,7 @@
   "display": "standalone",
   "background_color": "#1e293b",
   "theme_color": "#f59e0b",
-  "orientation": "portrait",
+  "orientation": "any",
   "scope": "/",
   "icons": [
     {
@@ -20,6 +20,18 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Check In",
+      "url": "/?view=shifts",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Cargo Ops",
+      "url": "/?view=cargo",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ],
   "categories": ["business", "logistics"],

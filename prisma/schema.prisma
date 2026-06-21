@@ -1,6 +1,25 @@
-// For production (Vercel): Change provider to "postgresql" and set DATABASE_URL to your Postgres connection string
-// Free options: Vercel Postgres, Supabase, Neon, Turso
-// Then run: npx prisma migrate dev --name init
+// ============================================
+// Steinweg Dock Management - Database Schema
+// ============================================
+//
+// LOCAL DEVELOPMENT (SQLite - default):
+//   provider = "sqlite"
+//   url      = env("DATABASE_URL")  → file:./db/custom.db
+//
+// PRODUCTION (PostgreSQL - for Vercel):
+//   Change provider to "postgresql"
+//   Set DATABASE_URL to your Postgres connection string
+//   Run: npx prisma migrate deploy
+//
+// FREE PostgreSQL OPTIONS:
+//   - Vercel Postgres: https://vercel.com/storage (256MB free)
+//   - Supabase: https://supabase.com (500MB free)
+//   - Neon: https://neon.tech (512MB free)
+//
+// IMPORTANT: After switching to PostgreSQL, run:
+//   npx prisma migrate dev --name init
+//   npx prisma migrate deploy (on Vercel)
+// ============================================
 
 generator client {
   provider = "prisma-client-js"

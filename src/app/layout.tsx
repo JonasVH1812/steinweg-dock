@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
+import { PWAInstallBanner } from "@/components/pwa-install-banner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -57,6 +58,7 @@ export default function RootLayout({
         <SessionProvider>
           {children}
           <PWAInstallPrompt />
+          <PWAInstallBanner />
         </SessionProvider>
       </body>
     </html>
