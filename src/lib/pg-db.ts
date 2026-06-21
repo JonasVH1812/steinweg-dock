@@ -5,11 +5,12 @@ const globalForPg = globalThis as unknown as {
 };
 
 function createPool(): Pool {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is not set. Please add it in Vercel Settings > Environment Variables.');
+  }
   const config: PoolConfig = {
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production'
-      ? { rejectUnauthorized: false }
-      : undefined,
+    ssl: { rejectUnauthorized: false }, // Always use SSL for Supabase
     max: 5,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
