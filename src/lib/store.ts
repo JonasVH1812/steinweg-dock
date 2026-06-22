@@ -36,7 +36,7 @@ interface AppState {
   logout: () => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   currentUser: null,
   currentRole: 'dock_worker',
   currentView: 'dashboard',
@@ -44,7 +44,16 @@ export const useAppStore = create<AppState>((set) => ({
   sidebarOpen: false,
   language: (typeof localStorage !== 'undefined' && localStorage.getItem('lang') as Language) || 'en',
   darkMode: (typeof localStorage !== 'undefined' && localStorage.getItem('darkMode') === 'true') || false,
-  setCurrentUser: (user) => set({ currentUser: user }),
+  setCurrentUser: (user) => {
+    // When user logs in, load their saved language preference
+    if (user?.language) {
+      const lang = user.language as Language;
+      if (typeof localStorage !== 'undefined') localStorage.setItem('lang', lang);
+      set({ currentUser: user, language: lang });
+    } else {
+      set({ currentUser: user });
+    }
+  },
   setCurrentRole: (role) => set({ currentRole: role, currentView: 'dashboard' }),
   setCurrentView: (view) => set({ currentView: view, sidebarOpen: false }),
   setSeeded: (seeded) => set({ seeded }),
@@ -52,6 +61,15 @@ export const useAppStore = create<AppState>((set) => ({
   setLanguage: (lang) => {
     if (typeof localStorage !== 'undefined') localStorage.setItem('lang', lang);
     set({ language: lang });
+    // Save language preference to server for the current user
+    const user = get().currentUser;
+    if (user?.id) {
+      fetch('/api/user/language', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang }),
+      }).catch(() => {}); // Silent fail - language saved locally anyway
+    }
   },
   setDarkMode: (dark) => {
     if (typeof localStorage !== 'undefined') localStorage.setItem('darkMode', String(dark));

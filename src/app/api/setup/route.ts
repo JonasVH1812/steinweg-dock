@@ -42,6 +42,7 @@ async function doSetup() {
         "role" TEXT NOT NULL DEFAULT 'dock_worker',
         "badge" TEXT,
         "phone" TEXT,
+        "language" TEXT DEFAULT 'en',
         "active" BOOLEAN NOT NULL DEFAULT true,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -49,6 +50,9 @@ async function doSetup() {
       );
       CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");
     `);
+
+    // Add language column if it doesn't exist (for existing databases)
+    await client.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "language" TEXT DEFAULT 'en'`).catch(() => {});
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS "Shift" (

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(req: NextRequest) {
   try {
     const role = req.nextUrl.searchParams.get('role');
-    let sql = 'SELECT * FROM "User"';
+    let sql = 'SELECT "id", "email", "name", "role", "badge", "phone", "language", "active" FROM "User"';
     const params: string[] = [];
     if (role) {
       params.push(role);

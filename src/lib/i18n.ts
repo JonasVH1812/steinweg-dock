@@ -1,12 +1,13 @@
 // Multi-language support for Steinweg Dock App
-// Supports: English, Dutch, French, German, Spanish, Polish, Turkish, Arabic, Romanian, Portuguese
+// Supports 16 languages: EN, NL, FR, DE, ES, PL, TR, AR, RO, PT, IT, CS, UK, ZH, RU, HI
 
-export type Language = 'en' | 'nl' | 'fr' | 'de' | 'es' | 'pl' | 'tr' | 'ar' | 'ro' | 'pt';
+export type Language = 'en' | 'nl' | 'fr' | 'de' | 'es' | 'pl' | 'tr' | 'ar' | 'ro' | 'pt' | 'it' | 'cs' | 'uk' | 'zh' | 'ru' | 'hi';
 
 export const languageNames: Record<Language, string> = {
   en: 'English', nl: 'Nederlands', fr: 'Français', de: 'Deutsch',
   es: 'Español', pl: 'Polski', tr: 'Türkçe', ar: 'العربية',
-  ro: 'Română', pt: 'Português',
+  ro: 'Română', pt: 'Português', it: 'Italiano', cs: 'Čeština',
+  uk: 'Українська', zh: '中文', ru: 'Русский', hi: 'हिन्दी',
 };
 
 type TranslationKey = keyof typeof translations.en;
