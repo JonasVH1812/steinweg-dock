@@ -8,7 +8,14 @@ export async function GET() {
 }
 
 async function doSetup() {
-  const client = await getClient();
+  let client;
+  try {
+    client = await getClient();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: 'Failed to connect to database: ' + msg }, { status: 500 });
+  }
+  
   try {
     await client.query('BEGIN');
 
@@ -401,7 +408,7 @@ async function doSetup() {
     await client.query('COMMIT');
     return NextResponse.json({ status: 'seeded', message: 'Database setup complete with demo data' });
   } catch (error: unknown) {
-    if (client.query) { try { await client.query('ROLLBACK'); } catch {} }
+    try { await client?.query('ROLLBACK'); } catch {}
     const msg = error instanceof Error ? error.message : String(error);
     console.error('Setup error:', msg);
     return NextResponse.json({ error: msg }, { status: 500 });
