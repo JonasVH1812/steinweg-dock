@@ -1091,13 +1091,12 @@ function DocumentManagement() {
 
 // ============ SAFETY CHECKLISTS ============
 function SafetyChecklists() {
-  const { language } = useAppStore();
+  const { language, currentUser } = useAppStore();
   const lang = language;
   const [checklists, setChecklists] = useState<SafetyChecklist[]>([]);
   const [selectedCl, setSelectedCl] = useState<SafetyChecklist | null>(null);
   const [newClDialog, setNewClDialog] = useState(false);
   const [newCl, setNewCl] = useState({ checkType: 'pre_shift', location: '' });
-  const { currentUser } = useAppStore();
 
   const safetyLoadedRef = useRef(false);
   const [, startTransitionSafety] = useTransition();
