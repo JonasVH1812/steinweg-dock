@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, useTransition, useCallback } from 'react';
 import { useAppStore, UserRole, AppView } from '@/lib/store';
+import { t, Language, languageNames } from '@/lib/i18n';
 import { signIn } from 'next-auth/react';
 import {
   Ship, Truck, FileText, Shield, Clock, Warehouse, Bell, BarChart3,
@@ -10,7 +11,8 @@ import {
   ClipboardList, ArrowRight, ArrowLeft, Eye, Edit, SignPlus,
   Anchor, Container, Box, CircleDot, Search, Filter, Download,
   Upload, Camera, Signature, CheckCheck, XCircle, MoreVertical,
-  Play, Pause, Square, CalendarDays, Route as RouteIcon, HardHat
+  Play, Pause, Square, CalendarDays, Route as RouteIcon, HardHat,
+  Settings, Users, FileSearch, Pen, Languages, Moon, Sun, Lock, PenLine
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -244,35 +246,37 @@ function LoginScreen() {
 
 // ============ SIDEBAR NAV ============
 function SidebarNav() {
-  const { currentRole, currentView, setCurrentView, currentUser, logout, sidebarOpen, setSidebarOpen } = useAppStore();
+  const { currentRole, currentView, setCurrentView, currentUser, logout, sidebarOpen, setSidebarOpen, language } = useAppStore();
+  const lang = language;
 
   const workerNav: { view: AppView; icon: React.ReactNode; label: string }[] = [
-    { view: 'dashboard', icon: <BarChart3 className="h-5 w-5" />, label: 'Dashboard' },
-    { view: 'shifts', icon: <Clock className="h-5 w-5" />, label: 'My Shift' },
-    { view: 'cargo', icon: <Ship className="h-5 w-5" />, label: 'Cargo Ops' },
-    { view: 'documents', icon: <FileText className="h-5 w-5" />, label: 'Documents' },
-    { view: 'safety', icon: <Shield className="h-5 w-5" />, label: 'Safety' },
-    { view: 'warehouses', icon: <Warehouse className="h-5 w-5" />, label: 'Warehouses' },
-    { view: 'notifications', icon: <Bell className="h-5 w-5" />, label: 'Alerts' },
+    { view: 'dashboard', icon: <BarChart3 className="h-5 w-5" />, label: t('dashboard', lang) },
+    { view: 'shifts', icon: <Clock className="h-5 w-5" />, label: t('shifts', lang) },
+    { view: 'cargo', icon: <Ship className="h-5 w-5" />, label: t('cargo', lang) },
+    { view: 'documents', icon: <FileText className="h-5 w-5" />, label: t('documents', lang) },
+    { view: 'safety', icon: <Shield className="h-5 w-5" />, label: t('safety', lang) },
+    { view: 'warehouses', icon: <Warehouse className="h-5 w-5" />, label: t('warehouses', lang) },
+    { view: 'notifications', icon: <Bell className="h-5 w-5" />, label: t('notifications', lang) },
   ];
 
   const chauffeurNav: { view: AppView; icon: React.ReactNode; label: string }[] = [
-    { view: 'dashboard', icon: <BarChart3 className="h-5 w-5" />, label: 'Dashboard' },
-    { view: 'trucks', icon: <Truck className="h-5 w-5" />, label: 'My Visits' },
-    { view: 'documents', icon: <FileText className="h-5 w-5" />, label: 'Documents' },
-    { view: 'notifications', icon: <Bell className="h-5 w-5" />, label: 'Alerts' },
+    { view: 'dashboard', icon: <BarChart3 className="h-5 w-5" />, label: t('dashboard', lang) },
+    { view: 'my-deliveries', icon: <Truck className="h-5 w-5" />, label: t('myDeliveries', lang) },
+    { view: 'trucks', icon: <Truck className="h-5 w-5" />, label: t('trucks', lang) },
+    { view: 'documents', icon: <FileText className="h-5 w-5" />, label: t('documents', lang) },
+    { view: 'notifications', icon: <Bell className="h-5 w-5" />, label: t('notifications', lang) },
   ];
 
   const adminNav: { view: AppView; icon: React.ReactNode; label: string }[] = [
-    { view: 'dashboard', icon: <BarChart3 className="h-5 w-5" />, label: 'Dashboard' },
-    { view: 'shifts', icon: <Clock className="h-5 w-5" />, label: 'Shifts' },
-    { view: 'cargo', icon: <Ship className="h-5 w-5" />, label: 'Cargo Ops' },
-    { view: 'documents', icon: <FileText className="h-5 w-5" />, label: 'Documents' },
-    { view: 'safety', icon: <Shield className="h-5 w-5" />, label: 'Safety' },
-    { view: 'trucks', icon: <Truck className="h-5 w-5" />, label: 'Trucks' },
-    { view: 'warehouses', icon: <Warehouse className="h-5 w-5" />, label: 'Warehouses' },
-    { view: 'notifications', icon: <Bell className="h-5 w-5" />, label: 'Alerts' },
-    { view: 'reports', icon: <BarChart3 className="h-5 w-5" />, label: 'Reports' },
+    { view: 'dashboard', icon: <BarChart3 className="h-5 w-5" />, label: t('dashboard', lang) },
+    { view: 'shifts', icon: <Clock className="h-5 w-5" />, label: t('shifts', lang) },
+    { view: 'cargo', icon: <Ship className="h-5 w-5" />, label: t('cargo', lang) },
+    { view: 'documents', icon: <FileText className="h-5 w-5" />, label: t('documents', lang) },
+    { view: 'safety', icon: <Shield className="h-5 w-5" />, label: t('safety', lang) },
+    { view: 'trucks', icon: <Truck className="h-5 w-5" />, label: t('trucks', lang) },
+    { view: 'warehouses', icon: <Warehouse className="h-5 w-5" />, label: t('warehouses', lang) },
+    { view: 'notifications', icon: <Bell className="h-5 w-5" />, label: t('notifications', lang) },
+    { view: 'admin', icon: <Users className="h-5 w-5" />, label: t('admin', lang) },
   ];
 
   const navItems = currentRole === 'admin' ? adminNav : currentRole === 'chauffeur' ? chauffeurNav : workerNav;
@@ -328,10 +332,14 @@ function SidebarNav() {
           </nav>
         </ScrollArea>
 
-        <div className="p-4 border-t border-slate-700">
+        <div className="p-4 border-t border-slate-700 space-y-1">
+          <button onClick={() => setCurrentView('settings')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${currentView === 'settings' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-700/50 border border-transparent'}`}>
+            <Settings className="h-5 w-5" /> {t('settings', lang)}
+          </button>
           <button onClick={logout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all">
-            <LogOut className="h-5 w-5" /> Sign Out
+            <LogOut className="h-5 w-5" /> {t('signOut', lang)}
           </button>
         </div>
       </aside>
@@ -341,11 +349,13 @@ function SidebarNav() {
 
 // ============ TOP BAR ============
 function TopBar() {
-  const { currentView, setSidebarOpen } = useAppStore();
+  const { currentView, setSidebarOpen, language } = useAppStore();
+  const lang = language;
   const viewTitles: Record<AppView, string> = {
-    dashboard: 'Dashboard', shifts: 'Shift Management', cargo: 'Cargo Operations',
-    documents: 'Documents', safety: 'Safety Checklists', trucks: 'Truck Visits',
-    warehouses: 'Warehouses', notifications: 'Notifications', reports: 'Reports & Analytics',
+    dashboard: t('dashboard', lang), shifts: t('shifts', lang), cargo: t('cargo', lang),
+    documents: t('documents', lang), safety: t('safety', lang), trucks: t('trucks', lang),
+    warehouses: t('warehouses', lang), notifications: t('notifications', lang), reports: t('reports', lang),
+    admin: t('admin', lang), settings: t('settings', lang), 'my-deliveries': t('myDeliveries', lang),
   };
 
   return (
@@ -1626,6 +1636,390 @@ function ReportsView() {
   );
 }
 
+// ============ ADMIN PANEL ============
+function AdminPanel() {
+  const { language } = useAppStore();
+  const lang = language;
+  const [users, setUsers] = useState<any[]>([]);
+  const [auditLog, setAuditLog] = useState<any[]>([]);
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [editUser, setEditUser] = useState<any>(null);
+  const [newUser, setNewUser] = useState({ email: '', name: '', role: 'dock_worker', badge: '', phone: '', password: '' });
+  const [tab, setTab] = useState('users');
+
+  const fetchUsers = useCallback(async () => {
+    const res = await fetch('/api/admin/users');
+    if (res.ok) setUsers(await res.json());
+  }, []);
+
+  const fetchAudit = useCallback(async () => {
+    const res = await fetch('/api/admin/audit?limit=50');
+    if (res.ok) setAuditLog(await res.json());
+  }, []);
+
+  useEffect(() => { fetchUsers(); fetchAudit(); }, [fetchUsers, fetchAudit]);
+
+  const handleAddUser = async () => {
+    if (!newUser.email || !newUser.name) { toast({ title: t('error', lang), description: 'Email and name required', variant: 'destructive' }); return; }
+    const res = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newUser) });
+    if (res.ok) {
+      const data = await res.json();
+      toast({ title: t('success', lang), description: `Created ${data.name}. Temp password: ${data.tempPassword}` });
+      setShowAddUser(false); setNewUser({ email: '', name: '', role: 'dock_worker', badge: '', phone: '', password: '' }); fetchUsers();
+    } else { const err = await res.json(); toast({ title: t('error', lang), description: err.error, variant: 'destructive' }); }
+  };
+
+  const handleUpdateUser = async (id: string, updates: any) => {
+    const res = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...updates }) });
+    if (res.ok) { toast({ title: t('success', lang), description: 'User updated' }); setEditUser(null); fetchUsers(); fetchAudit(); }
+    else { const err = await res.json(); toast({ title: t('error', lang), description: err.error, variant: 'destructive' }); }
+  };
+
+  return (
+    <div className="p-4 lg:p-6 space-y-6">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="users"><Users className="h-4 w-4 mr-2" />{t('userManagement', lang)}</TabsTrigger>
+          <TabsTrigger value="audit"><FileSearch className="h-4 w-4 mr-2" />{t('auditLog', lang)}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="users" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">{t('userManagement', lang)} ({users.length})</h3>
+            <Button onClick={() => setShowAddUser(true)} className="bg-amber-500 hover:bg-amber-600"><Plus className="h-4 w-4 mr-2" />{t('addUser', lang)}</Button>
+          </div>
+
+          {/* Add User Dialog */}
+          <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{t('addUser', lang)}</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <div><Label>{t('email', lang)}</Label><Input value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} /></div>
+                <div><Label>{t('name', lang)}</Label><Input value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} /></div>
+                <div><Label>{t('role', lang)}</Label>
+                  <Select value={newUser.role} onValueChange={v => setNewUser({...newUser, role: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dock_worker">Dock Worker</SelectItem>
+                      <SelectItem value="chauffeur">Chauffeur</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div><Label>{t('badge', lang)}</Label><Input value={newUser.badge} onChange={e => setNewUser({...newUser, badge: e.target.value})} /></div>
+                <div><Label>{t('phone', lang)}</Label><Input value={newUser.phone} onChange={e => setNewUser({...newUser, phone: e.target.value})} /></div>
+                <div><Label>{t('password', lang)}</Label><Input type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} placeholder="Default: changeme" /></div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowAddUser(false)}>{t('cancel', lang)}</Button>
+                <Button onClick={handleAddUser} className="bg-amber-500 hover:bg-amber-600">{t('create', lang)}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit User Dialog */}
+          <Dialog open={!!editUser} onOpenChange={() => setEditUser(null)}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{t('editUser', lang)}</DialogTitle></DialogHeader>
+              {editUser && (
+                <div className="space-y-3">
+                  <div><Label>{t('name', lang)}</Label><Input defaultValue={editUser.name} onChange={e => setEditUser({...editUser, name: e.target.value})} /></div>
+                  <div><Label>{t('role', lang)}</Label>
+                    <Select value={editUser.role} onValueChange={v => setEditUser({...editUser, role: v})}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="dock_worker">Dock Worker</SelectItem>
+                        <SelectItem value="chauffeur">Chauffeur</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>{t('badge', lang)}</Label><Input defaultValue={editUser.badge || ''} onChange={e => setEditUser({...editUser, badge: e.target.value})} /></div>
+                  <div><Label>{t('phone', lang)}</Label><Input defaultValue={editUser.phone || ''} onChange={e => setEditUser({...editUser, phone: e.target.value})} /></div>
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditUser(null)}>{t('cancel', lang)}</Button>
+                <Button onClick={() => handleUpdateUser(editUser.id, { name: editUser.name, role: editUser.role, badge: editUser.badge, phone: editUser.phone })} className="bg-amber-500 hover:bg-amber-600">{t('save', lang)}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <div className="rounded-xl border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-100 dark:bg-slate-800"><tr>
+                  <th className="p-3 text-left">{t('name', lang)}</th>
+                  <th className="p-3 text-left">{t('email', lang)}</th>
+                  <th className="p-3 text-left">{t('role', lang)}</th>
+                  <th className="p-3 text-left">{t('badge', lang)}</th>
+                  <th className="p-3 text-left">{t('status', lang)}</th>
+                  <th className="p-3 text-left">{t('actions', lang)}</th>
+                </tr></thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.id} className="border-t hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <td className="p-3 font-medium">{u.name}</td>
+                      <td className="p-3 text-slate-600">{u.email}</td>
+                      <td className="p-3"><Badge variant="outline" className={u.role === 'admin' ? 'border-amber-500 text-amber-600' : u.role === 'chauffeur' ? 'border-blue-500 text-blue-600' : 'border-green-500 text-green-600'}>{u.role}</Badge></td>
+                      <td className="p-3">{u.badge || '-'}</td>
+                      <td className="p-3"><Badge className={u.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>{u.active ? t('active', lang) : t('inactive', lang)}</Badge></td>
+                      <td className="p-3">
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => setEditUser(u)}><Edit className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleUpdateUser(u.id, { active: !u.active })}>
+                            {u.active ? <XCircle className="h-4 w-4 text-red-500" /> : <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="audit" className="space-y-4">
+          <h3 className="text-lg font-semibold">{t('auditLog', lang)}</h3>
+          <div className="rounded-xl border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-100 dark:bg-slate-800"><tr>
+                  <th className="p-3 text-left">{t('timestamp', lang)}</th>
+                  <th className="p-3 text-left">{t('action', lang)}</th>
+                  <th className="p-3 text-left">{t('performedBy', lang)}</th>
+                  <th className="p-3 text-left">{t('target', lang)}</th>
+                  <th className="p-3 text-left">{t('details', lang)}</th>
+                </tr></thead>
+                <tbody>
+                  {auditLog.map((entry: any) => (
+                    <tr key={entry.id} className="border-t hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <td className="p-3 text-xs">{formatDate(entry.createdAt)}</td>
+                      <td className="p-3"><Badge variant="outline">{entry.action}</Badge></td>
+                      <td className="p-3">{entry.performerName || entry.performedBy}</td>
+                      <td className="p-3">{entry.tableName} / {entry.recordId?.substring(0,8)}...</td>
+                      <td className="p-3 text-xs max-w-xs truncate">
+                        {entry.newValue ? <details><summary className="cursor-pointer text-blue-600">View changes</summary><pre className="mt-1 text-xs bg-slate-100 p-2 rounded overflow-auto max-h-32">{entry.newValue}</pre></details> : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// ============ SETTINGS VIEW ============
+function SettingsView() {
+  const { language, setLanguage, darkMode, setDarkMode, currentUser } = useAppStore();
+  const lang = language;
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (newPw.length < 6) { toast({ title: t('error', lang), description: t('passwordTooShort', lang), variant: 'destructive' }); return; }
+    if (newPw !== confirmPw) { toast({ title: t('error', lang), description: t('passwordMismatch', lang), variant: 'destructive' }); return; }
+    setPwLoading(true);
+    const res = await fetch('/api/auth/password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }) });
+    if (res.ok) { toast({ title: t('success', lang), description: t('passwordChanged', lang) }); setCurrentPw(''); setNewPw(''); setConfirmPw(''); }
+    else { const err = await res.json(); toast({ title: t('error', lang), description: err.error, variant: 'destructive' }); }
+    setPwLoading(false);
+  };
+
+  return (
+    <div className="p-4 lg:p-6 space-y-6 max-w-2xl">
+      {/* Profile */}
+      <Card>
+        <CardHeader><CardTitle>{t('myProfile', lang)}</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16"><AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-600 text-white text-xl font-bold">{currentUser?.name?.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback></Avatar>
+            <div>
+              <p className="font-semibold text-lg">{currentUser?.name}</p>
+              <p className="text-slate-500">{currentUser?.email}</p>
+              <Badge className="mt-1">{currentUser?.role}</Badge>
+            </div>
+          </div>
+          {currentUser?.badge && <p className="text-sm text-slate-600">{t('badge', lang)}: {currentUser.badge}</p>}
+          {currentUser?.phone && <p className="text-sm text-slate-600">{t('phone', lang)}: {currentUser.phone}</p>}
+        </CardContent>
+      </Card>
+
+      {/* Change Password */}
+      <Card>
+        <CardHeader><CardTitle><Lock className="h-5 w-5 inline mr-2" />{t('changePassword', lang)}</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div><Label>{t('currentPassword', lang)}</Label><Input type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} /></div>
+          <div><Label>{t('newPassword', lang)}</Label><Input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} /></div>
+          <div><Label>{t('confirmPassword', lang)}</Label><Input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} /></div>
+          <Button onClick={handleChangePassword} disabled={pwLoading} className="bg-amber-500 hover:bg-amber-600">{pwLoading ? t('saving', lang) : t('changePassword', lang)}</Button>
+        </CardContent>
+      </Card>
+
+      {/* Language */}
+      <Card>
+        <CardHeader><CardTitle><Languages className="h-5 w-5 inline mr-2" />{t('language', lang)}</CardTitle></CardHeader>
+        <CardContent>
+          <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
+            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {(Object.entries(languageNames) as [Language, string][]).map(([code, name]) => (
+                <SelectItem key={code} value={code}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      {/* Dark Mode */}
+      <Card>
+        <CardHeader><CardTitle>{darkMode ? <Moon className="h-5 w-5 inline mr-2" /> : <Sun className="h-5 w-5 inline mr-2" />}{darkMode ? t('darkMode', lang) : t('lightMode', lang)}</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            <Sun className="h-5 w-5 text-amber-500" />
+            <button onClick={() => setDarkMode(!darkMode)} className={`relative w-14 h-7 rounded-full transition-colors ${darkMode ? 'bg-amber-500' : 'bg-slate-300'}`}>
+              <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${darkMode ? 'translate-x-7' : 'translate-x-0.5'}`} />
+            </button>
+            <Moon className="h-5 w-5 text-slate-600" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ============ MY DELIVERIES VIEW (Chauffeur) ============
+function MyDeliveriesView() {
+  const { language, currentUser } = useAppStore();
+  const lang = language;
+  const [trucks, setTrucks] = useState<TruckVisit[]>([]);
+  const [signingTruck, setSigningTruck] = useState<TruckVisit | null>(null);
+  const [sigData, setSigData] = useState('');
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [drawing, setDrawing] = useState(false);
+
+  const fetchTrucks = useCallback(async () => {
+    const res = await fetch('/api/trucks');
+    if (res.ok) setTrucks(await res.json());
+  }, []);
+
+  useEffect(() => { fetchTrucks(); }, [fetchTrucks]);
+
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    setDrawing(true);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    const x = 'touches' in e ? e.touches[0].clientX - rect.left : (e as React.MouseEvent).clientX - rect.left;
+    const y = 'touches' in e ? e.touches[0].clientY - rect.top : (e as React.MouseEvent).clientY - rect.top;
+    ctx.beginPath(); ctx.moveTo(x, y);
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!drawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const x = 'touches' in e ? e.touches[0].clientX - rect.left : (e as React.MouseEvent).clientX - rect.left;
+    const y = 'touches' in e ? e.touches[0].clientY - rect.top : (e as React.MouseEvent).clientY - rect.top;
+    ctx.lineTo(x, y); ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setDrawing(false);
+    if (canvasRef.current) setSigData(canvasRef.current.toDataURL());
+  };
+
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setSigData('');
+  };
+
+  const confirmDelivery = async (truck: TruckVisit) => {
+    const res = await fetch('/api/trucks', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: truck.id, status: 'completed', completedAt: new Date().toISOString() })
+    });
+    if (res.ok) { toast({ title: t('success', lang), description: t('confirmDelivery', lang) }); setSigningTruck(null); fetchTrucks(); }
+  };
+
+  const myTrucks = trucks.filter(tv => currentUser && (tv.driverName?.includes(currentUser.name) || true));
+
+  return (
+    <div className="p-4 lg:p-6 space-y-6">
+      <h3 className="text-lg font-semibold">{t('myDeliveries', lang)}</h3>
+
+      {myTrucks.length === 0 ? (
+        <Card><CardContent className="p-8 text-center text-slate-500">{t('noResults', lang)}</CardContent></Card>
+      ) : myTrucks.map(tv => (
+        <Card key={tv.id} className="overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <p className="font-semibold">{tv.driverName}</p>
+                <p className="text-sm text-slate-500">{tv.truckPlate} {tv.trailerPlate ? `→ ${tv.trailerPlate}` : ''}</p>
+                <p className="text-sm">{tv.cargoDescription || tv.purpose}</p>
+                {tv.dockNumber && <p className="text-sm text-blue-600 font-medium">{t('dockNumber', lang)}: {tv.dockNumber}</p>}
+                {tv.company && <p className="text-sm text-slate-500">{tv.company}</p>}
+              </div>
+              <Badge className={statusColors[tv.status] || 'bg-gray-100 text-gray-800'}>{tv.status.replace(/_/g, ' ')}</Badge>
+            </div>
+            {tv.blReference && <p className="text-xs text-slate-400 mt-2">B/L: {tv.blReference}</p>}
+            {tv.bookingRef && <p className="text-xs text-slate-400">Booking: {tv.bookingRef}</p>}
+
+            <div className="flex gap-2 mt-4">
+              {tv.status === 'expected' && (
+                <Button size="sm" onClick={() => fetch('/api/trucks', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: tv.id, status: 'arrived', arrivedAt: new Date().toISOString() }) }).then(() => fetchTrucks())} className="bg-blue-500 hover:bg-blue-600">
+                  {t('markArrived', lang)}
+                </Button>
+              )}
+              {tv.status === 'at_dock' && (
+                <Button size="sm" onClick={() => setSigningTruck(tv)} className="bg-green-500 hover:bg-green-600">
+                  <PenLine className="h-4 w-4 mr-1" />{t('confirmDelivery', lang)}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+
+      {/* Signature Dialog */}
+      <Dialog open={!!signingTruck} onOpenChange={() => setSigningTruck(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{t('signatureRequired', lang)}</DialogTitle><DialogDescription>{t('pleaseSign', lang)}</DialogDescription></DialogHeader>
+          <div className="border-2 border-dashed border-slate-300 rounded-xl p-2 bg-white">
+            <canvas ref={canvasRef} width={400} height={150} className="w-full touch-none cursor-crosshair"
+              onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
+              onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
+          </div>
+          <div className="flex justify-between">
+            <Button variant="outline" size="sm" onClick={clearSignature}>{t('clearSignature', lang)}</Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSigningTruck(null)}>{t('cancel', lang)}</Button>
+            <Button onClick={() => signingTruck && confirmDelivery(signingTruck)} className="bg-green-500 hover:bg-green-600" disabled={!sigData}>{t('confirmDelivery', lang)}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // ============ MAIN APP ============
 function MainApp() {
   const { currentView } = useAppStore();
@@ -1640,6 +2034,9 @@ function MainApp() {
     warehouses: <WarehouseView />,
     notifications: <NotificationsView />,
     reports: <ReportsView />,
+    admin: <AdminPanel />,
+    settings: <SettingsView />,
+    'my-deliveries': <MyDeliveriesView />,
   };
 
   return (

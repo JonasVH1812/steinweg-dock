@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getClient, generateId } from '@/lib/pg-db';
+import { auditTableSQL } from '@/lib/audit';
 
 export async function POST() {
   const client = await getClient();
@@ -222,6 +223,9 @@ export async function POST() {
         CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
       );
     `);
+
+    // Create audit log table
+    await client.query(auditTableSQL);
 
     // Add foreign keys (ignore if already exist)
     const fkStatements = [
