@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server';
 import { getClient, generateId } from '@/lib/pg-db';
 import { auditTableSQL } from '@/lib/audit';
 
-export async function POST() {
+// GET handler so you can trigger setup from the browser URL bar
+export async function GET() {
+  return doSetup();
+}
+
+async function doSetup() {
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -396,11 +401,16 @@ export async function POST() {
     await client.query('COMMIT');
     return NextResponse.json({ status: 'seeded', message: 'Database setup complete with demo data' });
   } catch (error: unknown) {
-    await client.query('ROLLBACK');
+    if (client.query) { try { await client.query('ROLLBACK'); } catch {} }
     const msg = error instanceof Error ? error.message : String(error);
     console.error('Setup error:', msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   } finally {
     client.release();
   }
+}
+
+// POST handler calls doSetup
+export async function POST() {
+  return doSetup();
 }
