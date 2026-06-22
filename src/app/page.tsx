@@ -85,7 +85,8 @@ const notifIcons: Record<string, React.ReactNode> = {
 
 // ============ LOGIN SCREEN ============
 function LoginScreen() {
-  const { setCurrentUser, setCurrentRole, seeded, setSeeded } = useAppStore();
+  const { setCurrentUser, setCurrentRole, seeded, setSeeded, language } = useAppStore();
+  const lang = language;
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
@@ -169,7 +170,7 @@ function LoginScreen() {
             </CardHeader>
             <CardContent>
               <Button onClick={seedDb} disabled={seedLoading} className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white h-12 text-lg">
-                {seedLoading ? 'Loading...' : '🚀 Load Demo Data & Start'}
+                {seedLoading ? t('loading', lang) : t('loadDemo', lang)}
               </Button>
             </CardContent>
           </Card>
@@ -185,7 +186,7 @@ function LoginScreen() {
               {showEmailLogin ? (
                 <form onSubmit={handleEmailLogin} className="space-y-4">
                   <div>
-                    <Label className="text-slate-300">Email</Label>
+                    <Label className="text-slate-300">{t('email', lang)}</Label>
                     <Input type="email" placeholder="worker1@steinweg.be" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-slate-700 border-slate-600 text-white" required />
                   </div>
                   <div>
@@ -389,11 +390,11 @@ function QuickNotifications() {
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Notifications</DialogTitle>
+          <DialogTitle>{t('notifications', lang)}</DialogTitle>
           <DialogDescription>Recent alerts and updates</DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-80">
-          {notifs.length === 0 ? <p className="text-center text-muted-foreground py-8">No notifications</p> :
+          {notifs.length === 0 ? <p className="text-center text-muted-foreground py-8">t('noResults', lang)</p> :
             notifs.map(n => (
               <div key={n.id} className={`flex gap-3 p-3 rounded-lg mb-2 ${n.read ? 'opacity-60' : 'bg-slate-50 dark:bg-slate-800'}`}>
                 <div className="mt-0.5">{notifIcons[n.type] || <Info className="h-4 w-4" />}</div>
@@ -413,7 +414,8 @@ function QuickNotifications() {
 
 // ============ DASHBOARD ============
 function Dashboard() {
-  const { currentRole } = useAppStore();
+  const { currentRole, language } = useAppStore();
+  const lang = language;
   const [stats, setStats] = useState<Stats | null>(null);
   const [recentCargo, setRecentCargo] = useState<CargoOperation[]>([]);
   const [trucks, setTrucks] = useState<TruckVisit[]>([]);
@@ -431,17 +433,17 @@ function Dashboard() {
   if (!stats) return <div className="p-6"><div className="animate-pulse space-y-4"><div className="h-32 bg-slate-200 rounded-xl" /><div className="grid grid-cols-2 gap-4"><div className="h-24 bg-slate-200 rounded-xl" /><div className="h-24 bg-slate-200 rounded-xl" /><div className="h-24 bg-slate-200 rounded-xl" /><div className="h-24 bg-slate-200 rounded-xl" /></div></div></div>;
 
   const statCards = currentRole === 'chauffeur' ? [
-    { label: 'My Visits', value: trucks.filter(t => t.status !== 'completed').length, icon: <Truck className="h-6 w-6" />, color: 'from-blue-500 to-cyan-500' },
-    { label: 'Pending Docs', value: stats.pendingDocs, icon: <FileText className="h-6 w-6" />, color: 'from-amber-500 to-orange-500' },
-    { label: 'At Dock', value: stats.atDockTrucks, icon: <MapPin className="h-6 w-6" />, color: 'from-green-500 to-emerald-500' },
-    { label: 'Alerts', value: stats.unreadNotifications, icon: <Bell className="h-6 w-6" />, color: 'from-red-500 to-pink-500' },
+    { label: t('trucks', lang), value: trucks.filter(t => t.status !== 'completed').length, icon: <Truck className="h-6 w-6" />, color: 'from-blue-500 to-cyan-500' },
+    { label: t('pendingDocs', lang), value: stats.pendingDocs, icon: <FileText className="h-6 w-6" />, color: 'from-amber-500 to-orange-500' },
+    { label: t('atDockTrucks', lang), value: stats.atDockTrucks, icon: <MapPin className="h-6 w-6" />, color: 'from-green-500 to-emerald-500' },
+    { label: t('notifications', lang), value: stats.unreadNotifications, icon: <Bell className="h-6 w-6" />, color: 'from-red-500 to-pink-500' },
   ] : [
-    { label: 'Active Shifts', value: stats.activeShifts, icon: <Clock className="h-6 w-6" />, color: 'from-green-500 to-emerald-500' },
-    { label: 'Cargo In Progress', value: stats.inProgressCargo, icon: <Ship className="h-6 w-6" />, color: 'from-blue-500 to-cyan-500' },
-    { label: 'Trucks at Dock', value: stats.atDockTrucks, icon: <Truck className="h-6 w-6" />, color: 'from-amber-500 to-orange-500' },
-    { label: 'Pending Docs', value: stats.pendingDocs, icon: <FileText className="h-6 w-6" />, color: 'from-purple-500 to-violet-500' },
-    { label: 'Safety Checks', value: stats.activeSafetyChecks, icon: <Shield className="h-6 w-6" />, color: 'from-red-500 to-pink-500' },
-    { label: 'Alerts', value: stats.unreadNotifications, icon: <Bell className="h-6 w-6" />, color: 'from-slate-500 to-slate-600' },
+    { label: t('activeShifts', lang), value: stats.activeShifts, icon: <Clock className="h-6 w-6" />, color: 'from-green-500 to-emerald-500' },
+    { label: t('inProgressCargo', lang), value: stats.inProgressCargo, icon: <Ship className="h-6 w-6" />, color: 'from-blue-500 to-cyan-500' },
+    { label: t('atDockTrucks', lang), value: stats.atDockTrucks, icon: <Truck className="h-6 w-6" />, color: 'from-amber-500 to-orange-500' },
+    { label: t('pendingDocs', lang), value: stats.pendingDocs, icon: <FileText className="h-6 w-6" />, color: 'from-purple-500 to-violet-500' },
+    { label: t('activeSafety', lang), value: stats.activeSafetyChecks, icon: <Shield className="h-6 w-6" />, color: 'from-red-500 to-pink-500' },
+    { label: t('notifications', lang), value: stats.unreadNotifications, icon: <Bell className="h-6 w-6" />, color: 'from-slate-500 to-slate-600' },
   ];
 
   return (
@@ -469,10 +471,10 @@ function Dashboard() {
         {/* Active Cargo Operations */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2"><Ship className="h-5 w-5 text-blue-500" /> Active Cargo Operations</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2"><Ship className="h-5 w-5 text-blue-500" /> {t('cargo', lang)}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {recentCargo.length === 0 ? <p className="text-muted-foreground text-sm py-4">No active operations</p> :
+            {recentCargo.length === 0 ? <p className="text-muted-foreground text-sm py-4">{t('noResults', lang)}</p> :
               recentCargo.slice(0, 3).map(op => (
                 <div key={op.id} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
                   <div className="mt-1 text-blue-500">{cargoTypeIcons[op.cargoType || ''] || <Package className="h-4 w-4" />}</div>
@@ -493,10 +495,10 @@ function Dashboard() {
         {/* Today's Trucks */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2"><Truck className="h-5 w-5 text-amber-500" /> Today&apos;s Truck Visits</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2"><Truck className="h-5 w-5 text-amber-500" /> {t('trucks', lang)}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {trucks.length === 0 ? <p className="text-muted-foreground text-sm py-4">No truck visits today</p> :
+            {trucks.length === 0 ? <p className="text-muted-foreground text-sm py-4">{t('noResults', lang)}</p> :
               trucks.slice(0, 4).map(tv => (
                 <div key={tv.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
                   <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">
@@ -516,7 +518,7 @@ function Dashboard() {
         {/* Warehouse Overview */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2"><Warehouse className="h-5 w-5 text-emerald-500" /> Warehouse Occupancy</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2"><Warehouse className="h-5 w-5 text-emerald-500" /> {t('warehouseOverview', lang)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -531,7 +533,7 @@ function Dashboard() {
                     <p className="font-semibold text-sm truncate">{wh.name}</p>
                     <div className="mt-3">
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>{wh.occupiedSlots}/{wh.totalSlots} slots</span>
+                        <span>{wh.occupiedSlots}/{wh.totalSlots} {t('occupied', lang).toLowerCase()}</span>
                         <span>{pct}%</span>
                       </div>
                       <Progress value={pct} className="h-2" />
@@ -549,7 +551,8 @@ function Dashboard() {
 
 // ============ SHIFT MANAGEMENT ============
 function ShiftManagement() {
-  const { currentUser } = useAppStore();
+  const { currentUser, language } = useAppStore();
+  const lang = language;
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [checkInDialog, setCheckInDialog] = useState(false);
@@ -667,7 +670,7 @@ function ShiftManagement() {
                     <Input placeholder="e.g. Quai 125, Berth 127" value={newShift.location} onChange={(e) => setNewShift(p => ({ ...p, location: e.target.value }))} />
                   </div>
                 </div>
-                <DialogFooter><Button onClick={checkIn} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">Start Shift</Button></DialogFooter>
+                <DialogFooter><Button onClick={checkIn} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">{t('startShift', lang)}</Button></DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
@@ -701,11 +704,12 @@ function ShiftManagement() {
 
 // ============ CARGO OPERATIONS ============
 function CargoOperations() {
+  const { currentRole, currentUser, language } = useAppStore();
+  const lang = language;
   const [operations, setOperations] = useState<CargoOperation[]>([]);
   const [filter, setFilter] = useState('all');
   const [selectedOp, setSelectedOp] = useState<CargoOperation | null>(null);
   const [newOpDialog, setNewOpDialog] = useState(false);
-  const { currentUser } = useAppStore();
   const [newOp, setNewOp] = useState({ operationType: 'unloading', vesselName: '', berthNumber: '', cargoType: 'breakbulk', description: '' });
 
   const [, startTransitionOps] = useTransition();
@@ -789,8 +793,8 @@ function CargoOperations() {
             </div>
 
             <div className="flex gap-2">
-              {selectedOp.status === 'pending' && <Button onClick={() => updateStatus(selectedOp.id, 'in_progress')} className="bg-blue-500 text-white"><Play className="h-4 w-4 mr-2" />Start</Button>}
-              {selectedOp.status === 'in_progress' && <Button onClick={() => updateStatus(selectedOp.id, 'completed')} className="bg-green-500 text-white"><CheckCircle2 className="h-4 w-4 mr-2" />Complete</Button>}
+              {selectedOp.status === 'pending' && <Button onClick={() => updateStatus(selectedOp.id, 'in_progress')} className="bg-blue-500 text-white"><Play className="h-4 w-4 mr-2" />{t('startOperation', lang)}</Button>}
+              {selectedOp.status === 'in_progress' && <Button onClick={() => updateStatus(selectedOp.id, 'completed')} className="bg-green-500 text-white"><CheckCircle2 className="h-4 w-4 mr-2" />{t('completeOperation', lang)}</Button>}
             </div>
 
             {/* Cargo Items / Tally */}
@@ -870,7 +874,7 @@ function CargoOperations() {
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Description</Label><Textarea placeholder="Cargo description..." value={newOp.description} onChange={(e) => setNewOp(p => ({ ...p, description: e.target.value }))} /></div>
+            <div><Label>{t('description', lang)}</Label><Textarea placeholder="Cargo description..." value={newOp.description} onChange={(e) => setNewOp(p => ({ ...p, description: e.target.value }))} /></div>
           </div>
           <DialogFooter><Button onClick={createOp} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">Create Operation</Button></DialogFooter>
         </DialogContent>
@@ -881,6 +885,8 @@ function CargoOperations() {
 
 // ============ DOCUMENTS ============
 function DocumentManagement() {
+  const { language } = useAppStore();
+  const lang = language;
   const [documents, setDocuments] = useState<Document[]>([]);
   const [filter, setFilter] = useState('all');
   const [newDocDialog, setNewDocDialog] = useState(false);
@@ -1048,7 +1054,7 @@ function DocumentManagement() {
               </Select>
             </div>
             <div><Label>Reference Number</Label><Input placeholder="e.g. BL-ANT-2026-5521" value={newDoc.reference} onChange={(e) => setNewDoc(p => ({ ...p, reference: e.target.value }))} /></div>
-            <div><Label>Notes</Label><Textarea placeholder="Additional notes..." value={newDoc.notes} onChange={(e) => setNewDoc(p => ({ ...p, notes: e.target.value }))} /></div>
+            <div><Label>{t('notes', lang)}</Label><Textarea placeholder="Additional notes..." value={newDoc.notes} onChange={(e) => setNewDoc(p => ({ ...p, notes: e.target.value }))} /></div>
             
             {/* Photo Capture Section */}
             <div>
@@ -1083,6 +1089,8 @@ function DocumentManagement() {
 
 // ============ SAFETY CHECKLISTS ============
 function SafetyChecklists() {
+  const { language } = useAppStore();
+  const lang = language;
   const [checklists, setChecklists] = useState<SafetyChecklist[]>([]);
   const [selectedCl, setSelectedCl] = useState<SafetyChecklist | null>(null);
   const [newClDialog, setNewClDialog] = useState(false);
@@ -1158,7 +1166,7 @@ function SafetyChecklists() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Location</Label><Input placeholder="e.g. Quai 125" value={newCl.location} onChange={(e) => setNewCl(p => ({ ...p, location: e.target.value }))} /></div>
+              <div><Label>{t('location', lang)}</Label><Input placeholder="e.g. Quai 125" value={newCl.location} onChange={(e) => setNewCl(p => ({ ...p, location: e.target.value }))} /></div>
             </div>
             <DialogFooter><Button onClick={createChecklist} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">Start Check</Button></DialogFooter>
           </DialogContent>
@@ -1318,7 +1326,8 @@ function getChecklistTemplate(type: string): { category: string; question: strin
 
 // ============ TRUCK VISITS ============
 function TruckVisits() {
-  const { currentRole, currentUser } = useAppStore();
+  const { currentRole, currentUser, language } = useAppStore();
+  const lang = language;
   const [trucks, setTrucks] = useState<TruckVisit[]>([]);
   const [newTruckDialog, setNewTruckDialog] = useState(false);
   const [newTruck, setNewTruck] = useState({ driverName: '', truckPlate: '', trailerPlate: '', company: '', purpose: 'delivery', cargoDescription: '', bookingRef: '' });
@@ -1362,7 +1371,7 @@ function TruckVisits() {
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Truck Visits</h2>
+        <h2 className="text-lg font-semibold">{t('trucks', lang)}</h2>
         <Dialog open={newTruckDialog} onOpenChange={setNewTruckDialog}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
@@ -1435,6 +1444,8 @@ function TruckVisits() {
 
 // ============ WAREHOUSES ============
 function WarehouseView() {
+  const { language } = useAppStore();
+  const lang = language;
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [selectedWh, setSelectedWh] = useState<Warehouse | null>(null);
 
@@ -1462,7 +1473,7 @@ function WarehouseView() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">Type</p><p className="font-semibold">{typeLabels[selectedWh.type]}</p></div>
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">{t('cargoType', lang)}</p><p className="font-semibold">{typeLabels[selectedWh.type]}</p></div>
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">Capacity</p><p className="font-semibold">{selectedWh.capacity?.toLocaleString() || '-'} slots</p></div>
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">Area</p><p className="font-semibold">{selectedWh.area?.toLocaleString() || '-'} m²</p></div>
             </div>
@@ -1515,6 +1526,8 @@ function WarehouseView() {
 
 // ============ NOTIFICATIONS ============
 function NotificationsView() {
+  const { language } = useAppStore();
+  const lang = language;
   const [notifs, setNotifs] = useState<Notification[]>([]);
 
   const notifsLoadedRef = useRef(false);
@@ -1547,7 +1560,7 @@ function NotificationsView() {
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Notifications</h2>
+        <h2 className="text-lg font-semibold">{t('notifications', lang)}</h2>
         <Button variant="outline" size="sm" onClick={markAllRead}><CheckCheck className="h-4 w-4 mr-2" /> Mark All Read</Button>
       </div>
       <div className="space-y-3">
@@ -1576,10 +1589,12 @@ function NotificationsView() {
 
 // ============ REPORTS ============
 function ReportsView() {
+  const { language } = useAppStore();
+  const lang = language;
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => { fetch('/api/stats').then(r => r.json()).then(setStats); }, []);
-  if (!stats) return <div className="p-6"><p>Loading...</p></div>;
+  if (!stats) return <div className="p-6"><p>{t('loading', lang)}</p></div>;
 
   const reportCards = [
     { title: 'Shifts', data: [{ label: 'Active', value: stats.activeShifts }] },
