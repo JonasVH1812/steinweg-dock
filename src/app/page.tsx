@@ -622,7 +622,7 @@ function ShiftManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-green-100 text-sm font-medium">Active Shift</p>
-                <p className="text-2xl font-bold mt-1">{activeShift.type === 'day' ? 'Day' : 'Night'} Shift</p>
+                <p className="text-2xl font-bold mt-1">{activeShift.type === 'day' ? t('day', lang) : t('night', lang)} Shift</p>
                 <div className="flex items-center gap-4 mt-2 text-green-100 text-sm">
                   <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {formatTime(activeShift.checkIn)}</span>
                   <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {activeShift.location || 'Not assigned'}</span>
@@ -860,19 +860,19 @@ function CargoOperations() {
               <Select value={newOp.operationType} onValueChange={(v) => setNewOp(p => ({ ...p, operationType: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="unloading">Unloading</SelectItem><SelectItem value="loading">Loading</SelectItem>
+                  <SelectItem value="unloading">{t('unloading', lang)}</SelectItem><SelectItem value="loading">{t('loading', lang)}</SelectItem>
                   <SelectItem value="tally">Tally Check</SelectItem><SelectItem value="transfer">Transfer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Vessel Name</Label><Input placeholder="e.g. MV ATLANTIC STAR" value={newOp.vesselName} onChange={(e) => setNewOp(p => ({ ...p, vesselName: e.target.value }))} /></div>
+            <div><Label>{t('vesselName', lang)}</Label><Input placeholder="e.g. MV ATLANTIC STAR" value={newOp.vesselName} onChange={(e) => setNewOp(p => ({ ...p, vesselName: e.target.value }))} /></div>
             <div><Label>Berth Number</Label><Input placeholder="e.g. 125" value={newOp.berthNumber} onChange={(e) => setNewOp(p => ({ ...p, berthNumber: e.target.value }))} /></div>
-            <div><Label>Cargo Type</Label>
+            <div><Label>{t('cargoType', lang)}</Label>
               <Select value={newOp.cargoType} onValueChange={(v) => setNewOp(p => ({ ...p, cargoType: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="breakbulk">Breakbulk</SelectItem><SelectItem value="container">Container</SelectItem>
-                  <SelectItem value="roro">RoRo</SelectItem><SelectItem value="bulk">Bulk</SelectItem>
+                  <SelectItem value="breakbulk">{t('breakbulk', lang)}</SelectItem><SelectItem value="container">{t('container', lang)}</SelectItem>
+                  <SelectItem value="roro">{t('roro', lang)}</SelectItem><SelectItem value="bulk">{t('bulk', lang)}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1159,7 +1159,7 @@ function SafetyChecklists() {
           <DialogContent>
             <DialogHeader><DialogTitle>Start Safety Checklist</DialogTitle></DialogHeader>
             <div className="space-y-4">
-              <div><Label>Check Type</Label>
+              <div><Label>{t('checkType', lang)}</Label>
                 <Select value={newCl.checkType} onValueChange={(v) => setNewCl(p => ({ ...p, checkType: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -1382,16 +1382,16 @@ function TruckVisits() {
           <DialogContent>
             <DialogHeader><DialogTitle>Register Truck Visit</DialogTitle></DialogHeader>
             <div className="space-y-4">
-              <div><Label>Driver Name</Label><Input placeholder="Full name" value={newTruck.driverName} onChange={(e) => setNewTruck(p => ({ ...p, driverName: e.target.value }))} /></div>
+              <div><Label>{t('driverName', lang)}</Label><Input placeholder="Full name" value={newTruck.driverName} onChange={(e) => setNewTruck(p => ({ ...p, driverName: e.target.value }))} /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>Truck Plate</Label><Input placeholder="1-ABC-123" value={newTruck.truckPlate} onChange={(e) => setNewTruck(p => ({ ...p, truckPlate: e.target.value }))} /></div>
-                <div><Label>Trailer Plate</Label><Input placeholder="1-XYZ-456" value={newTruck.trailerPlate} onChange={(e) => setNewTruck(p => ({ ...p, trailerPlate: e.target.value }))} /></div>
+                <div><Label>{t('truckPlate', lang)}</Label><Input placeholder="1-ABC-123" value={newTruck.truckPlate} onChange={(e) => setNewTruck(p => ({ ...p, truckPlate: e.target.value }))} /></div>
+                <div><Label>{t('trailerPlate', lang)}</Label><Input placeholder="1-XYZ-456" value={newTruck.trailerPlate} onChange={(e) => setNewTruck(p => ({ ...p, trailerPlate: e.target.value }))} /></div>
               </div>
-              <div><Label>Company</Label><Input placeholder="Transport company" value={newTruck.company} onChange={(e) => setNewTruck(p => ({ ...p, company: e.target.value }))} /></div>
-              <div><Label>Purpose</Label>
+              <div><Label>{t('company', lang)}</Label><Input placeholder="Transport company" value={newTruck.company} onChange={(e) => setNewTruck(p => ({ ...p, company: e.target.value }))} /></div>
+              <div><Label>{t('purpose', lang)}</Label>
                 <Select value={newTruck.purpose} onValueChange={(v) => setNewTruck(p => ({ ...p, purpose: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="delivery">Delivery</SelectItem><SelectItem value="pickup">Pickup</SelectItem><SelectItem value="both">Both</SelectItem></SelectContent>
+                  <SelectContent><SelectItem value="delivery">{t('delivery', lang)}</SelectItem><SelectItem value="pickup">{t('pickup', lang)}</SelectItem><SelectItem value="both">Both</SelectItem></SelectContent>
                 </Select>
               </div>
               <div><Label>Cargo Description</Label><Textarea placeholder="What cargo..." value={newTruck.cargoDescription} onChange={(e) => setNewTruck(p => ({ ...p, cargoDescription: e.target.value }))} /></div>
@@ -1475,8 +1475,8 @@ function WarehouseView() {
           <CardContent>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">{t('cargoType', lang)}</p><p className="font-semibold">{typeLabels[selectedWh.type]}</p></div>
-              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">Capacity</p><p className="font-semibold">{selectedWh.capacity?.toLocaleString() || '-'} slots</p></div>
-              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">Area</p><p className="font-semibold">{selectedWh.area?.toLocaleString() || '-'} m²</p></div>
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">{t('capacity', lang)}</p><p className="font-semibold">{selectedWh.capacity?.toLocaleString() || '-'} slots</p></div>
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">{t('area', lang)}</p><p className="font-semibold">{selectedWh.area?.toLocaleString() || '-'} m²</p></div>
             </div>
             <h4 className="font-semibold text-sm mb-3">Storage Locations</h4>
             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
