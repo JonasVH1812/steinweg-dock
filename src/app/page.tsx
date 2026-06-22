@@ -377,6 +377,8 @@ function TopBar() {
 }
 
 function QuickNotifications() {
+  const { language } = useAppStore();
+  const lang = language;
   const [notifs, setNotifs] = useState<Notification[]>([]);
   useEffect(() => { fetch('/api/notifications').then(r => r.json()).then(setNotifs); }, []);
   const unread = notifs.filter(n => !n.read).length;
@@ -2037,7 +2039,8 @@ function MyDeliveriesView() {
 
 // ============ MAIN APP ============
 function MainApp() {
-  const { currentView } = useAppStore();
+  const { currentView, language } = useAppStore();
+  const lang = language;
 
   const viewMap: Record<AppView, React.ReactNode> = {
     dashboard: <Dashboard />,
