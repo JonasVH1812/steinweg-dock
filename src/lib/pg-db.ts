@@ -14,18 +14,18 @@ let _pool: Pool | undefined;
 function getPool(): Pool {
   if (_pool) return _pool;
 
-  // Reuse cached pool in development to avoid connection exhaustion
-  if (process.env.NODE_ENV !== 'production' && globalForPg.pgPool) {
+  // Reuse cached pool globally to avoid connection exhaustion on serverless
+  if (globalForPg.pgPool) {
     _pool = globalForPg.pgPool;
     return _pool;
   }
 
-  // Prefer POSTGRES_URL_NON_POOLING (direct connection, proper SSL cert)
-  // Then POSTGRES_URL (pooler, self-signed cert)
-  // Then DATABASE_URL (user-set)
+  // Use POSTGRES_URL (Supabase pooler) - it handles connection pooling server-side
+  // POSTGRES_URL_NON_POOLING is for direct connections which exhaust the pool limit
+  // Fallback order: pooler URL → non-pooling → user-set DATABASE_URL
   const connectionString =
-    process.env.POSTGRES_URL_NON_POOLING ||
     process.env.POSTGRES_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
     process.env.DATABASE_URL;
 
   if (!connectionString) {
@@ -37,16 +37,15 @@ function getPool(): Pool {
   const config: PoolConfig = {
     connectionString,
     ssl: { rejectUnauthorized: false },
-    max: 5,
-    idleTimeoutMillis: 30000,
+    max: 2,             // Very small pool for Vercel serverless (each function = 1 instance)
+    idleTimeoutMillis: 5000,   // Release idle connections quickly
     connectionTimeoutMillis: 10000,
   };
 
   _pool = new Pool(config);
 
-  if (process.env.NODE_ENV !== 'production') {
-    globalForPg.pgPool = _pool;
-  }
+  // Cache pool globally so it persists across function invocations
+  globalForPg.pgPool = _pool;
 
   return _pool;
 }

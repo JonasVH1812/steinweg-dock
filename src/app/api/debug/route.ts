@@ -5,14 +5,14 @@ export async function GET() {
   const results: Record<string, unknown> = {};
 
   const connectionString =
-    process.env.POSTGRES_URL_NON_POOLING ||
     process.env.POSTGRES_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
     process.env.DATABASE_URL;
   results.databaseUrlSet = !!connectionString;
-  results.usingUrl = process.env.POSTGRES_URL_NON_POOLING
-    ? 'POSTGRES_URL_NON_POOLING'
-    : process.env.POSTGRES_URL
-      ? 'POSTGRES_URL'
+  results.usingUrl = process.env.POSTGRES_URL
+    ? 'POSTGRES_URL'
+    : process.env.POSTGRES_URL_NON_POOLING
+      ? 'POSTGRES_URL_NON_POOLING'
       : process.env.DATABASE_URL
         ? 'DATABASE_URL'
         : 'NONE';
