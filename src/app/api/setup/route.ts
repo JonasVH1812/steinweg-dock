@@ -245,6 +245,41 @@ async function doSetup() {
     // Create audit log table
     await client.query(auditTableSQL);
 
+    // Add new columns for professional document handling (safe for existing DBs)
+    const newColumns = [
+      // CargoOperation: lot number, weights, instructions
+      `ALTER TABLE "CargoOperation" ADD COLUMN IF NOT EXISTS "lotNumber" TEXT`,
+      `ALTER TABLE "CargoOperation" ADD COLUMN IF NOT EXISTS "grossWeight" DOUBLE PRECISION`,
+      `ALTER TABLE "CargoOperation" ADD COLUMN IF NOT EXISTS "netWeight" DOUBLE PRECISION`,
+      `ALTER TABLE "CargoOperation" ADD COLUMN IF NOT EXISTS "instructions" TEXT`,
+      // TruckVisit: lot number, weights, transport code, instructions, sign-offs
+      `ALTER TABLE "TruckVisit" ADD COLUMN IF NOT EXISTS "lotNumber" TEXT`,
+      `ALTER TABLE "TruckVisit" ADD COLUMN IF NOT EXISTS "grossWeight" DOUBLE PRECISION`,
+      `ALTER TABLE "TruckVisit" ADD COLUMN IF NOT EXISTS "netWeight" DOUBLE PRECISION`,
+      `ALTER TABLE "TruckVisit" ADD COLUMN IF NOT EXISTS "transportCode" TEXT`,
+      `ALTER TABLE "TruckVisit" ADD COLUMN IF NOT EXISTS "instructions" TEXT`,
+      `ALTER TABLE "TruckVisit" ADD COLUMN IF NOT EXISTS "preparedBy" TEXT`,
+      `ALTER TABLE "TruckVisit" ADD COLUMN IF NOT EXISTS "checkedBy" TEXT`,
+      `ALTER TABLE "TruckVisit" ADD COLUMN IF NOT EXISTS "photoBefore" TEXT`,
+      `ALTER TABLE "TruckVisit" ADD COLUMN IF NOT EXISTS "photoDuring" TEXT`,
+      `ALTER TABLE "TruckVisit" ADD COLUMN IF NOT EXISTS "photoAfter" TEXT`,
+      `ALTER TABLE "TruckVisit" ADD COLUMN IF NOT EXISTS "loadSecured" BOOLEAN DEFAULT false`,
+      // Document: template fields for professional output
+      `ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "lotNumber" TEXT`,
+      `ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "grossWeight" DOUBLE PRECISION`,
+      `ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "netWeight" DOUBLE PRECISION`,
+      `ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "preparedBy" TEXT`,
+      `ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "checkedBy" TEXT`,
+      `ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "orderNumber" TEXT`,
+      `ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "customerName" TEXT`,
+      `ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "transportCode" TEXT`,
+      `ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "instructions" TEXT`,
+      `ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "barcode" TEXT`,
+    ];
+    for (const col of newColumns) {
+      await client.query(col).catch(() => {});
+    }
+
     // Add foreign keys (ignore if already exist)
     const fkStatements = [
       `ALTER TABLE "Shift" ADD CONSTRAINT "Shift_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE`,

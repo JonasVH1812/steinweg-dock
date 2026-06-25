@@ -36,10 +36,10 @@ import { Toaster } from '@/components/ui/toaster';
 interface Shift { id: string; userId: string; type: string; status: string; checkIn: string; checkOut: string | null; location: string | null; notes: string | null; user?: any; }
 interface CargoOperation { id: string; operationType: string; status: string; vesselName: string | null; voyageNumber: string | null; berthNumber: string | null; warehouseId: string | null; cargoType: string | null; reference: string | null; weight: number | null; unitCount: number | null; description: string | null; assignedTo: string | null; startedAt: string | null; completedAt: string | null; warehouse?: any; assignee?: any; items?: CargoItem[]; }
 interface CargoItem { id: string; cargoOpId: string; itemType: string; markOrNumber: string | null; description: string | null; quantity: number; weight: number | null; condition: string; damageNotes: string | null; storageLocation: string | null; checked: boolean; }
-interface Document { id: string; docType: string; reference: string; status: string; cargoOpId: string | null; truckVisitId: string | null; content: string | null; notes: string | null; createdAt: string; signatures?: any[]; }
+interface Document { id: string; docType: string; reference: string; status: string; cargoOpId: string | null; truckVisitId: string | null; content: string | null; notes: string | null; orderNumber: string | null; customerName: string | null; transportCode: string | null; lotNumber: string | null; grossWeight: number | null; netWeight: number | null; instructions: string | null; photos: string | null; createdAt: string; signatures?: any[]; }
 interface SafetyChecklist { id: string; userId: string; checkType: string; status: string; location: string | null; notes: string | null; createdAt: string; user?: any; items?: SafetyCheckItem[]; }
 interface SafetyCheckItem { id: string; checklistId: string; category: string; question: string; passed: boolean | null; notes: string | null; orderIndex: number; }
-interface TruckVisit { id: string; driverName: string; driverLicense: string | null; company: string | null; truckPlate: string; trailerPlate: string | null; purpose: string; status: string; dockNumber: string | null; expectedArrival: string | null; arrivedAt: string | null; dockAssignedAt: string | null; completedAt: string | null; cargoDescription: string | null; blReference: string | null; bookingRef: string | null; notes: string | null; documents?: Document[]; }
+interface TruckVisit { id: string; driverName: string; driverLicense: string | null; company: string | null; truckPlate: string; trailerPlate: string | null; purpose: string; status: string; dockNumber: string | null; expectedArrival: string | null; arrivedAt: string | null; dockAssignedAt: string | null; completedAt: string | null; cargoDescription: string | null; blReference: string | null; bookingRef: string | null; notes: string | null; lotNumber: string | null; transportCode: string | null; grossWeight: number | null; netWeight: number | null; instructions: string | null; documents?: Document[]; }
 interface Warehouse { id: string; name: string; code: string; location: string | null; type: string; capacity: number | null; area: number | null; storageLocations?: any[]; }
 interface Notification { id: string; type: string; title: string; message: string; read: boolean; category: string | null; createdAt: string; }
 interface Stats { activeShifts: number; pendingCargo: number; inProgressCargo: number; completedCargo: number; expectedTrucks: number; atDockTrucks: number; pendingDocs: number; activeSafetyChecks: number; unreadNotifications: number; totalWorkers: number; totalChauffeurs: number; warehouses: any[]; }
@@ -947,10 +947,11 @@ function DocumentManagement() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [filter, setFilter] = useState('all');
   const [newDocDialog, setNewDocDialog] = useState(false);
-  const [newDoc, setNewDoc] = useState({ docType: 'bill_of_lading', reference: '', notes: '' });
+  const [newDoc, setNewDoc] = useState({ docType: 'bill_of_lading', reference: '', notes: '', orderNumber: '', customerName: '', transportCode: '', lotNumber: '', grossWeight: '', netWeight: '', instructions: '' });
   const [viewDoc, setViewDoc] = useState<Document | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [printDoc, setPrintDoc] = useState<Document | null>(null);
 
   const [, startTransitionDocs] = useTransition();
   const loadDocs = useCallback(async () => {
@@ -965,11 +966,12 @@ function DocumentManagement() {
   }, [loadDocs]);
 
   const createDoc = async () => {
-    const docData: any = { ...newDoc, status: 'draft' };
+    const docData: any = { ...newDoc, status: 'draft', grossWeight: newDoc.grossWeight ? parseFloat(newDoc.grossWeight) : null, netWeight: newDoc.netWeight ? parseFloat(newDoc.netWeight) : null };
     if (photos.length > 0) docData.photos = JSON.stringify(photos);
     await fetch('/api/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(docData) });
     setNewDocDialog(false);
     setPhotos([]);
+    setNewDoc({ docType: 'bill_of_lading', reference: '', notes: '', orderNumber: '', customerName: '', transportCode: '', lotNumber: '', grossWeight: '', netWeight: '', instructions: '' });
     toast({ title: t('success', lang), description: t('documents', lang) });
     loadDocs();
   };
@@ -1058,11 +1060,16 @@ function DocumentManagement() {
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-xs text-muted-foreground">{formatDate(doc.createdAt)}</p>
-                  {doc.status !== 'signed' && doc.status !== 'archived' && (
-                    <Button size="sm" variant="outline" className="mt-2 text-xs" onClick={(e) => { e.stopPropagation(); signDoc(doc.id); }}>
-                      <Signature className="h-3 w-3 mr-1" /> {t('signDocument', lang)}
+                  <div className="flex gap-1 mt-2 justify-end">
+                    <Button size="sm" variant="outline" className="text-xs" onClick={(e) => { e.stopPropagation(); setPrintDoc(doc); }}>
+                      <Download className="h-3 w-3 mr-1" /> {t('printDocument', lang)}
                     </Button>
-                  )}
+                    {doc.status !== 'signed' && doc.status !== 'archived' && (
+                      <Button size="sm" variant="outline" className="text-xs" onClick={(e) => { e.stopPropagation(); signDoc(doc.id); }}>
+                        <Signature className="h-3 w-3 mr-1" /> {t('signDocument', lang)}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
               {/* Expanded view */}
@@ -1099,8 +1106,8 @@ function DocumentManagement() {
       </div>
 
       <Dialog open={newDocDialog} onOpenChange={setNewDocDialog}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{t('create', lang)}</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{t('create', lang)} {t('documents', lang)}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>{t('docType', lang)}</Label>
               <Select value={newDoc.docType} onValueChange={(v) => setNewDoc(p => ({ ...p, docType: v }))}>
@@ -1111,6 +1118,19 @@ function DocumentManagement() {
               </Select>
             </div>
             <div><Label>{t('reference', lang)}</Label><Input placeholder="e.g. BL-ANT-2026-5521" value={newDoc.reference} onChange={(e) => setNewDoc(p => ({ ...p, reference: e.target.value }))} /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>{t('orderNumber', lang)}</Label><Input placeholder="e.g. LO-2026-0001" value={newDoc.orderNumber} onChange={(e) => setNewDoc(p => ({ ...p, orderNumber: e.target.value }))} /></div>
+              <div><Label>{t('customerName', lang)}</Label><Input placeholder="Customer name" value={newDoc.customerName} onChange={(e) => setNewDoc(p => ({ ...p, customerName: e.target.value }))} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>{t('transportCode', lang)}</Label><Input placeholder="Transport code" value={newDoc.transportCode} onChange={(e) => setNewDoc(p => ({ ...p, transportCode: e.target.value }))} /></div>
+              <div><Label>{t('lotNumber', lang)}</Label><Input placeholder="Lot number" value={newDoc.lotNumber} onChange={(e) => setNewDoc(p => ({ ...p, lotNumber: e.target.value }))} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>{t('grossWeightKg', lang)}</Label><Input type="number" placeholder="0" value={newDoc.grossWeight} onChange={(e) => setNewDoc(p => ({ ...p, grossWeight: e.target.value }))} /></div>
+              <div><Label>{t('netWeightKg', lang)}</Label><Input type="number" placeholder="0" value={newDoc.netWeight} onChange={(e) => setNewDoc(p => ({ ...p, netWeight: e.target.value }))} /></div>
+            </div>
+            <div><Label>{t('instructions', lang)}</Label><Textarea placeholder="Warehouse instructions..." value={newDoc.instructions} onChange={(e) => setNewDoc(p => ({ ...p, instructions: e.target.value }))} rows={3} /></div>
             <div><Label>{t('notes', lang)}</Label><Textarea placeholder="Additional notes..." value={newDoc.notes} onChange={(e) => setNewDoc(p => ({ ...p, notes: e.target.value }))} /></div>
             
             {/* Photo Capture Section */}
@@ -1138,6 +1158,20 @@ function DocumentManagement() {
             </div>
           </div>
           <DialogFooter><Button onClick={createDoc} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">{t('create', lang)}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Print Dialog */}
+      <Dialog open={!!printDoc} onOpenChange={() => setPrintDoc(null)}>
+        <DialogContent className="max-w-3xl max-h-[95vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{t('printLoadingOrder', lang)}</DialogTitle></DialogHeader>
+          <DocumentPrintView doc={printDoc} truck={null} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPrintDoc(null)}>{t('close', lang)}</Button>
+            <Button onClick={() => window.print()} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
+              <Download className="h-4 w-4 mr-2" /> {t('printDocument', lang)}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -1386,7 +1420,8 @@ function TruckVisits() {
   const lang = language;
   const [trucks, setTrucks] = useState<TruckVisit[]>([]);
   const [newTruckDialog, setNewTruckDialog] = useState(false);
-  const [newTruck, setNewTruck] = useState({ driverName: '', truckPlate: '', trailerPlate: '', company: '', purpose: 'delivery', cargoDescription: '', bookingRef: '' });
+  const [newTruck, setNewTruck] = useState({ driverName: '', truckPlate: '', trailerPlate: '', company: '', purpose: 'delivery', cargoDescription: '', bookingRef: '', lotNumber: '', transportCode: '', grossWeight: '', netWeight: '', instructions: '' });
+  const [printTruckVisit, setPrintTruckVisit] = useState<TruckVisit | null>(null);
 
   const trucksLoadedRef = useRef(false);
   const [, startTransitionTrucks] = useTransition();
@@ -1403,8 +1438,9 @@ function TruckVisits() {
   }, [loadTrucks]);
 
   const createTruck = async () => {
-    await fetch('/api/trucks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...newTruck, status: 'expected', expectedArrival: new Date(Date.now() + 3600000).toISOString() }) });
+    await fetch('/api/trucks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...newTruck, grossWeight: newTruck.grossWeight ? parseFloat(newTruck.grossWeight) : null, netWeight: newTruck.netWeight ? parseFloat(newTruck.netWeight) : null, status: 'expected', expectedArrival: new Date(Date.now() + 3600000).toISOString() }) });
     setNewTruckDialog(false);
+    setNewTruck({ driverName: '', truckPlate: '', trailerPlate: '', company: '', purpose: 'delivery', cargoDescription: '', bookingRef: '', lotNumber: '', transportCode: '', grossWeight: '', netWeight: '', instructions: '' });
     toast({ title: t('success', lang), description: t('trucks', lang) });
     loadTrucks();
   };
@@ -1434,7 +1470,7 @@ function TruckVisits() {
               <Plus className="h-4 w-4 mr-2" /> {t('add', lang)}
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{t('trucks', lang)}</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div><Label>{t('driverName', lang)}</Label><Input placeholder="Full name" value={newTruck.driverName} onChange={(e) => setNewTruck(p => ({ ...p, driverName: e.target.value }))} /></div>
@@ -1451,6 +1487,16 @@ function TruckVisits() {
               </div>
               <div><Label>{t('cargoDescription', lang)}</Label><Textarea placeholder="What cargo..." value={newTruck.cargoDescription} onChange={(e) => setNewTruck(p => ({ ...p, cargoDescription: e.target.value }))} /></div>
               <div><Label>{t('bookingRef', lang)}</Label><Input placeholder="BK-2026-XXXX" value={newTruck.bookingRef} onChange={(e) => setNewTruck(p => ({ ...p, bookingRef: e.target.value }))} /></div>
+              <Separator />
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label>{t('lotNumber', lang)}</Label><Input placeholder="Lot number" value={newTruck.lotNumber} onChange={(e) => setNewTruck(p => ({ ...p, lotNumber: e.target.value }))} /></div>
+                <div><Label>{t('transportCode', lang)}</Label><Input placeholder="Transport code" value={newTruck.transportCode} onChange={(e) => setNewTruck(p => ({ ...p, transportCode: e.target.value }))} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label>{t('grossWeightKg', lang)}</Label><Input type="number" placeholder="0" value={newTruck.grossWeight} onChange={(e) => setNewTruck(p => ({ ...p, grossWeight: e.target.value }))} /></div>
+                <div><Label>{t('netWeightKg', lang)}</Label><Input type="number" placeholder="0" value={newTruck.netWeight} onChange={(e) => setNewTruck(p => ({ ...p, netWeight: e.target.value }))} /></div>
+              </div>
+              <div><Label>{t('instructions', lang)}</Label><Textarea placeholder="Special instructions..." value={newTruck.instructions} onChange={(e) => setNewTruck(p => ({ ...p, instructions: e.target.value }))} rows={3} /></div>
             </div>
             <DialogFooter><Button onClick={createTruck} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">{t('create', lang)}</Button></DialogFooter>
           </DialogContent>
@@ -1482,18 +1528,35 @@ function TruckVisits() {
                     {tv.expectedArrival && <span>{t('expectedArrival', lang)}: {formatTime(tv.expectedArrival)}</span>}
                   </div>
                 </div>
-                <div className="shrink-0">
+                <div className="shrink-0 flex flex-col gap-2 items-end">
                   {statusFlow[tv.status] && (
                     <Button size="sm" onClick={() => advanceStatus(tv.id, tv.status)} className="bg-blue-500 hover:bg-blue-600 text-white">
                       <ArrowRight className="h-4 w-4 mr-1" /> {statusLabel(statusFlow[tv.status][0], lang)}
                     </Button>
                   )}
+                  <Button size="sm" variant="outline" onClick={() => setPrintTruckVisit(tv)} className="text-xs">
+                    <Download className="h-3 w-3 mr-1" /> {t('printLoadingOrder', lang)}
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Print Loading Order Dialog */}
+      <Dialog open={!!printTruckVisit} onOpenChange={() => setPrintTruckVisit(null)}>
+        <DialogContent className="max-w-3xl max-h-[95vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{t('printLoadingOrder', lang)}</DialogTitle></DialogHeader>
+          <DocumentPrintView doc={null} truck={printTruckVisit} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPrintTruckVisit(null)}>{t('close', lang)}</Button>
+            <Button onClick={() => window.print()} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
+              <Download className="h-4 w-4 mr-2" /> {t('printDocument', lang)}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1718,15 +1781,16 @@ function AdminPanel() {
   const [newUser, setNewUser] = useState({ email: '', name: '', role: 'dock_worker', badge: '', phone: '', password: '' });
   const [tab, setTab] = useState('users');
 
+  const [, startTransitionAdmin] = useTransition();
   const fetchUsers = useCallback(async () => {
     const res = await fetch('/api/admin/users');
-    if (res.ok) setUsers(await res.json());
-  }, []);
+    if (res.ok) { const data = await res.json(); startTransitionAdmin(() => setUsers(data)); }
+  }, [startTransitionAdmin]);
 
   const fetchAudit = useCallback(async () => {
     const res = await fetch('/api/admin/audit?limit=50');
-    if (res.ok) setAuditLog(await res.json());
-  }, []);
+    if (res.ok) { const data = await res.json(); startTransitionAdmin(() => setAuditLog(data)); }
+  }, [startTransitionAdmin]);
 
   useEffect(() => { fetchUsers(); fetchAudit(); }, [fetchUsers, fetchAudit]);
 
@@ -1966,23 +2030,208 @@ function SettingsView() {
   );
 }
 
+// ============ DOCUMENT PRINT VIEW ============
+function DocumentPrintView({ doc, truck }: { doc: Document | null; truck: TruckVisit | null }) {
+  const { language } = useAppStore();
+  const lang = language;
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('nl-BE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+
+  const orderNum = doc?.orderNumber || doc?.reference || 'LO-2026-0001';
+  const custName = doc?.customerName || truck?.company || '';
+  const transCode = doc?.transportCode || truck?.transportCode || '';
+  const lotNum = doc?.lotNumber || truck?.lotNumber || '';
+  const ref = doc?.reference || truck?.bookingRef || '';
+  const grossW = doc?.grossWeight ?? truck?.grossWeight ?? null;
+  const netW = doc?.netWeight ?? truck?.netWeight ?? null;
+  const instr = doc?.instructions || truck?.instructions || '';
+  const productDesc = doc?.content || truck?.cargoDescription || '';
+  const productCode = doc?.docType || truck?.purpose || '';
+
+  return (
+    <div id="print-area" className="bg-white text-black p-8 font-sans text-xs" style={{ maxWidth: '210mm', margin: '0 auto' }}>
+      {/* Header */}
+      <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 bg-gradient-to-br from-amber-600 to-orange-700 rounded-lg flex items-center justify-center">
+              <Anchor className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold tracking-wide">C. STEINWEG BELGIUM N.V.</h1>
+              <p className="text-[10px] text-gray-600">Vrieskaai 125-133, 2000 Antwerpen</p>
+              <p className="text-[10px] text-gray-600">Tel: +32 3 570 28 00 — BTW BE 0405.272.440</p>
+            </div>
+          </div>
+        </div>
+        <div className="text-right">
+          <h2 className="text-base font-bold uppercase tracking-wider border border-black px-3 py-1 mb-2">{t('laadorder', lang)} / {t('loadingOrder', lang)}</h2>
+          <p className="text-[10px]">{t('date', lang)}: {dateStr} — {t('time', lang)}: {timeStr}</p>
+          <div className="mt-2 border border-black px-4 py-2 text-center">
+            <p className="text-[8px] text-gray-500 uppercase">{t('barcode', lang)}</p>
+            <div className="flex justify-center gap-0.5 my-1">
+              {Array.from({ length: 30 }).map((_, i) => (
+                <div key={i} className={`${i % 3 === 0 ? 'w-[2px]' : i % 3 === 1 ? 'w-[1px]' : 'w-[3px]'} h-6 bg-black`} />
+              ))}
+            </div>
+            <p className="text-[8px] font-mono">{orderNum}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Order Info Grid */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="border border-gray-400 p-2">
+          <p className="text-[9px] text-gray-500 uppercase">{t('orderNumber', lang)}</p>
+          <p className="text-sm font-bold text-amber-700">{orderNum}</p>
+        </div>
+        <div className="border border-gray-400 p-2">
+          <p className="text-[9px] text-gray-500 uppercase">{t('customerName', lang)}</p>
+          <p className="text-sm font-semibold">{custName}</p>
+        </div>
+        <div className="border border-gray-400 p-2">
+          <p className="text-[9px] text-gray-500 uppercase">{t('transportCode', lang)}</p>
+          <p className="text-sm font-semibold">{transCode}</p>
+        </div>
+        <div className="border border-gray-400 p-2">
+          <p className="text-[9px] text-gray-500 uppercase">{t('lotNumber', lang)}</p>
+          <p className="text-sm font-semibold">{lotNum}</p>
+        </div>
+        <div className="border border-gray-400 p-2">
+          <p className="text-[9px] text-gray-500 uppercase">{t('reference', lang)}</p>
+          <p className="text-sm font-semibold">{ref}</p>
+        </div>
+        <div className="border border-gray-400 p-2">
+          <p className="text-[9px] text-gray-500 uppercase">{t('truckPlate', lang)}</p>
+          <p className="text-sm font-semibold">{truck?.truckPlate || ''}</p>
+        </div>
+      </div>
+
+      {/* Product Details Table */}
+      <div className="mb-4">
+        <h3 className="text-[10px] font-bold uppercase border-b border-gray-400 pb-1 mb-2">{t('productDetails', lang)}</h3>
+        <table className="w-full border-collapse text-[10px]">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border border-gray-400 px-2 py-1 text-left">{t('description', lang)}</th>
+              <th className="border border-gray-400 px-2 py-1 text-left">{t('productCode', lang)}</th>
+              <th className="border border-gray-400 px-2 py-1 text-center">{t('quantity', lang)}</th>
+              <th className="border border-gray-400 px-2 py-1 text-right">{t('grossWeightKg', lang)}</th>
+              <th className="border border-gray-400 px-2 py-1 text-right">{t('netWeightKg', lang)}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="border border-gray-400 px-2 py-1">{productDesc || '—'}</td>
+              <td className="border border-gray-400 px-2 py-1">{productCode || '—'}</td>
+              <td className="border border-gray-400 px-2 py-1 text-center">1</td>
+              <td className="border border-gray-400 px-2 py-1 text-right">{grossW != null ? grossW.toLocaleString() : '—'}</td>
+              <td className="border border-gray-400 px-2 py-1 text-right">{netW != null ? netW.toLocaleString() : '—'}</td>
+            </tr>
+            <tr className="bg-gray-50 font-semibold">
+              <td className="border border-gray-400 px-2 py-1" colSpan={2}>{t('total', lang) || 'Total'}</td>
+              <td className="border border-gray-400 px-2 py-1 text-center">1</td>
+              <td className="border border-gray-400 px-2 py-1 text-right">{grossW != null ? grossW.toLocaleString() : '—'}</td>
+              <td className="border border-gray-400 px-2 py-1 text-right">{netW != null ? netW.toLocaleString() : '—'}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Instructions */}
+      {instr && (
+        <div className="mb-4 border border-gray-400 p-3">
+          <h3 className="text-[10px] font-bold uppercase mb-1">{t('warehouseInstructions', lang)}</h3>
+          <p className="text-[10px] whitespace-pre-wrap">{instr}</p>
+        </div>
+      )}
+
+      {/* Sign-off Section */}
+      <div className="grid grid-cols-2 gap-8 mt-8">
+        <div>
+          <p className="text-[10px] font-bold uppercase mb-6">{t('preparedBy', lang)}:</p>
+          <div className="border-t border-black pt-1">
+            <p className="text-[9px]">{t('signatureLine', lang)}: ___________________________</p>
+            <p className="text-[9px] mt-2">{t('dateLine', lang)}: ___/___/______</p>
+          </div>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase mb-6">{t('checkedBy', lang)}:</p>
+          <div className="border-t border-black pt-1">
+            <p className="text-[9px]">{t('signatureLine', lang)}: ___________________________</p>
+            <p className="text-[9px] mt-2">{t('dateLine', lang)}: ___/___/______</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-8 pt-3 border-t-2 border-gray-300 flex justify-between items-center">
+        <p className="text-[8px] text-gray-500">{t('companyInfo', lang)}</p>
+        <p className="text-[8px] text-gray-500">{t('page', lang)} 1/1</p>
+      </div>
+    </div>
+  );
+}
+
 // ============ MY DELIVERIES VIEW (Chauffeur) ============
 function MyDeliveriesView() {
   const { language, currentUser } = useAppStore();
   const lang = language;
   const [trucks, setTrucks] = useState<TruckVisit[]>([]);
-  const [signingTruck, setSigningTruck] = useState<TruckVisit | null>(null);
+  const [activeTruck, setActiveTruck] = useState<TruckVisit | null>(null);
+  const [step, setStep] = useState(0); // 0=list, 1-6=wizard steps
   const [sigData, setSigData] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [drawing, setDrawing] = useState(false);
 
+  // Step state
+  const [stepData, setStepData] = useState({
+    // Step 2: Pre-loading
+    photoBefore: '',
+    loadAreaInspected: false,
+    // Step 3: Loading
+    itemsLoaded: false,
+    grossWeight: '',
+    netWeight: '',
+    loadingNotes: '',
+    // Step 4: Securing
+    loadSecured: false,
+    photoDuring: '',
+    // Step 5: Post-loading
+    photoAfter: '',
+  });
+  const [uploading, setUploading] = useState(false);
+  const [printTruck, setPrintTruck] = useState<TruckVisit | null>(null);
+
+  const [, startTransitionDeliveries] = useTransition();
   const fetchTrucks = useCallback(async () => {
     const res = await fetch('/api/trucks');
-    if (res.ok) setTrucks(await res.json());
-  }, []);
+    if (res.ok) { const data = await res.json(); startTransitionDeliveries(() => setTrucks(data)); }
+  }, [startTransitionDeliveries]);
 
   useEffect(() => { fetchTrucks(); }, [fetchTrucks]);
 
+  const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('photo', files[0]);
+    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+    if (res.ok) {
+      const data = await res.json();
+      setStepData(prev => ({ ...prev, [field]: data.url }));
+      toast({ title: t('success', lang), description: files[0].name });
+    } else {
+      toast({ title: t('error', lang), variant: 'destructive' });
+    }
+    setUploading(false);
+    e.target.value = '';
+  };
+
+  // Signature pad functions
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
     setDrawing(true);
     const canvas = canvasRef.current;
@@ -2021,72 +2270,350 @@ function MyDeliveriesView() {
     setSigData('');
   };
 
-  const confirmDelivery = async (truck: TruckVisit) => {
-    const res = await fetch('/api/trucks', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: truck.id, status: 'completed', completedAt: new Date().toISOString() })
-    });
-    if (res.ok) { toast({ title: t('success', lang), description: t('confirmDelivery', lang) }); setSigningTruck(null); fetchTrucks(); }
+  const confirmArrival = async (truck: TruckVisit) => {
+    await fetch('/api/trucks', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: truck.id, status: 'arrived', arrivedAt: new Date().toISOString() }) });
+    toast({ title: t('success', lang), description: t('arrivalConfirmed', lang) });
+    fetchTrucks();
+    const fresh = await fetch('/api/trucks').then(r => r.json());
+    const updated = fresh.find((t: TruckVisit) => t.id === truck.id);
+    if (updated) setActiveTruck(updated);
+  };
+
+  const completeDelivery = async () => {
+    if (!activeTruck) return;
+    // Update truck with weight data and complete
+    await fetch('/api/trucks', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      id: activeTruck.id,
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+      grossWeight: stepData.grossWeight ? parseFloat(stepData.grossWeight) : null,
+      netWeight: stepData.netWeight ? parseFloat(stepData.netWeight) : null,
+    }) });
+    toast({ title: t('success', lang), description: t('processComplete', lang) });
+    fetchTrucks();
+    setStep(6);
   };
 
   const myTrucks = trucks.filter(tv => currentUser && (tv.driverName?.includes(currentUser.name) || true));
 
-  return (
-    <div className="p-4 lg:p-6 space-y-6">
-      <h3 className="text-lg font-semibold">{t('myDeliveries', lang)}</h3>
+  const stepLabels = [
+    t('stepArrival', lang),
+    t('stepPreLoading', lang),
+    t('stepLoading', lang),
+    t('stepSecuring', lang),
+    t('stepPostLoading', lang),
+    t('stepComplete', lang),
+  ];
 
-      {myTrucks.length === 0 ? (
-        <Card><CardContent className="p-8 text-center text-slate-500">{t('noResults', lang)}</CardContent></Card>
-      ) : myTrucks.map(tv => (
-        <Card key={tv.id} className="overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-start">
-              <div className="space-y-1">
-                <p className="font-semibold">{tv.driverName}</p>
-                <p className="text-sm text-slate-500">{tv.truckPlate} {tv.trailerPlate ? `→ ${tv.trailerPlate}` : ''}</p>
-                <p className="text-sm">{tv.cargoDescription || tv.purpose}</p>
-                {tv.dockNumber && <p className="text-sm text-blue-600 font-medium">{t('dockNumber', lang)}: {tv.dockNumber}</p>}
-                {tv.company && <p className="text-sm text-slate-500">{tv.company}</p>}
+  const stepIcons = [
+    <MapPin key="arrival" className="h-4 w-4" />,
+    <Eye key="preloading" className="h-4 w-4" />,
+    <Package key="loading" className="h-4 w-4" />,
+    <Shield key="securing" className="h-4 w-4" />,
+    <Camera key="postloading" className="h-4 w-4" />,
+    <CheckCircle2 key="complete" className="h-4 w-4" />,
+  ];
+
+  const canAdvanceStep = () => {
+    switch (step) {
+      case 1: return true; // Arrival just needs confirmation
+      case 2: return stepData.loadAreaInspected; // Pre-loading needs inspection checkbox
+      case 3: return stepData.itemsLoaded; // Loading needs items confirmed
+      case 4: return stepData.loadSecured; // Securing needs secured checkbox
+      case 5: return !!sigData; // Post-loading needs signature
+      default: return false;
+    }
+  };
+
+  // If no active truck, show list view
+  if (step === 0 || !activeTruck) {
+    return (
+      <div className="p-4 lg:p-6 space-y-6">
+        <h3 className="text-lg font-semibold">{t('myDeliveries', lang)}</h3>
+        {myTrucks.length === 0 ? (
+          <Card><CardContent className="p-8 text-center text-slate-500">{t('noResults', lang)}</CardContent></Card>
+        ) : myTrucks.map(tv => (
+          <Card key={tv.id} className="overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <p className="font-semibold">{tv.driverName}</p>
+                  <p className="text-sm text-slate-500">{tv.truckPlate} {tv.trailerPlate ? `→ ${tv.trailerPlate}` : ''}</p>
+                  <p className="text-sm">{tv.cargoDescription || tv.purpose}</p>
+                  {tv.dockNumber && <p className="text-sm text-blue-600 font-medium">{t('dockNumber', lang)}: {tv.dockNumber}</p>}
+                  {tv.company && <p className="text-sm text-slate-500">{tv.company}</p>}
+                </div>
+                <Badge className={statusColors[tv.status] || 'bg-gray-100 text-gray-800'}>{statusLabel(tv.status, lang)}</Badge>
               </div>
-              <Badge className={statusColors[tv.status] || 'bg-gray-100 text-gray-800'}>{statusLabel(tv.status, lang)}</Badge>
-            </div>
-            {tv.blReference && <p className="text-xs text-slate-400 mt-2">{t('blReference', lang)}: {tv.blReference}</p>}
-            {tv.bookingRef && <p className="text-xs text-slate-400">{t('bookingRef', lang)}: {tv.bookingRef}</p>}
+              {tv.blReference && <p className="text-xs text-slate-400 mt-2">{t('blReference', lang)}: {tv.blReference}</p>}
+              {tv.bookingRef && <p className="text-xs text-slate-400">{t('bookingRef', lang)}: {tv.bookingRef}</p>}
 
-            <div className="flex gap-2 mt-4">
-              {tv.status === 'expected' && (
-                <Button size="sm" onClick={() => fetch('/api/trucks', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: tv.id, status: 'arrived', arrivedAt: new Date().toISOString() }) }).then(() => fetchTrucks())} className="bg-blue-500 hover:bg-blue-600">
-                  {t('markArrived', lang)}
+              <div className="flex gap-2 mt-4">
+                {tv.status !== 'completed' && (
+                  <Button size="sm" onClick={() => { setActiveTruck(tv); setStep(tv.status === 'expected' ? 1 : tv.status === 'arrived' ? 2 : tv.status === 'at_dock' ? 3 : tv.status === 'loading' ? 4 : 1); setStepData({ photoBefore: '', loadAreaInspected: false, itemsLoaded: false, grossWeight: '', netWeight: '', loadingNotes: '', loadSecured: false, photoDuring: '', photoAfter: '' }); setSigData(''); }} className="bg-amber-500 hover:bg-amber-600">
+                    <ArrowRight className="h-4 w-4 mr-1" /> {t('details', lang)}
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" onClick={() => setPrintTruck(tv)}>
+                  <Download className="h-4 w-4 mr-1" /> {t('printLoadingOrder', lang)}
                 </Button>
-              )}
-              {tv.status === 'at_dock' && (
-                <Button size="sm" onClick={() => setSigningTruck(tv)} className="bg-green-500 hover:bg-green-600">
-                  <PenLine className="h-4 w-4 mr-1" />{t('confirmDelivery', lang)}
-                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {/* Print Dialog for Truck */}
+        <Dialog open={!!printTruck} onOpenChange={() => setPrintTruck(null)}>
+          <DialogContent className="max-w-3xl max-h-[95vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>{t('printLoadingOrder', lang)}</DialogTitle></DialogHeader>
+            <DocumentPrintView doc={null} truck={printTruck} />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPrintTruck(null)}>{t('close', lang)}</Button>
+              <Button onClick={() => window.print()} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
+                <Download className="h-4 w-4 mr-2" /> {t('printDocument', lang)}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  // Wizard view
+  return (
+    <div className="p-4 lg:p-6 space-y-6 max-w-2xl mx-auto">
+      {/* Header with back button */}
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={() => { setStep(0); setActiveTruck(null); }}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> {t('back', lang)}
+        </Button>
+        <h3 className="text-lg font-semibold">{t('myDeliveries', lang)}</h3>
+      </div>
+
+      {/* Stepper */}
+      <div className="flex items-center justify-between mb-6">
+        {stepLabels.map((label, i) => {
+          const stepNum = i + 1;
+          const isActive = step === stepNum;
+          const isCompleted = step > stepNum;
+          return (
+            <div key={i} className="flex flex-col items-center flex-1">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                isCompleted ? 'bg-green-500 text-white' : isActive ? 'bg-amber-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+              }`}>
+                {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : stepIcons[i]}
+              </div>
+              <p className={`text-[10px] mt-1 text-center ${isActive ? 'font-bold text-amber-600' : isCompleted ? 'text-green-600' : 'text-slate-400'}`}>{label}</p>
+              {i < stepLabels.length - 1 && (
+                <div className={`hidden sm:block h-0.5 w-full absolute left-1/2 top-4 ${isCompleted ? 'bg-green-500' : 'bg-slate-200'}`} />
               )}
             </div>
-          </CardContent>
-        </Card>
-      ))}
+          );
+        })}
+      </div>
 
-      {/* Signature Dialog */}
-      <Dialog open={!!signingTruck} onOpenChange={() => setSigningTruck(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{t('signatureRequired', lang)}</DialogTitle><DialogDescription>{t('pleaseSign', lang)}</DialogDescription></DialogHeader>
-          <div className="border-2 border-dashed border-slate-300 rounded-xl p-2 bg-white">
-            <canvas ref={canvasRef} width={400} height={150} className="w-full touch-none cursor-crosshair"
-              onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
-              onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
-          </div>
-          <div className="flex justify-between">
-            <Button variant="outline" size="sm" onClick={clearSignature}>{t('clearSignature', lang)}</Button>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSigningTruck(null)}>{t('cancel', lang)}</Button>
-            <Button onClick={() => signingTruck && confirmDelivery(signingTruck)} className="bg-green-500 hover:bg-green-600" disabled={!sigData}>{t('confirmDelivery', lang)}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Step Content */}
+      <Card>
+        <CardContent className="p-6">
+          {/* Step 1: Arrival */}
+          {step === 1 && (
+            <div className="space-y-4">
+              <h4 className="font-semibold flex items-center gap-2"><MapPin className="h-5 w-5 text-amber-500" /> {t('stepArrival', lang)}</h4>
+              <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 space-y-2">
+                <p className="text-sm"><strong>{t('driverName', lang)}:</strong> {activeTruck.driverName}</p>
+                <p className="text-sm"><strong>{t('truckPlate', lang)}:</strong> {activeTruck.truckPlate}</p>
+                <p className="text-sm"><strong>{t('company', lang)}:</strong> {activeTruck.company}</p>
+                <p className="text-sm"><strong>{t('purpose', lang)}:</strong> {activeTruck.purpose}</p>
+                <p className="text-sm"><strong>{t('cargoDescription', lang)}:</strong> {activeTruck.cargoDescription || '—'}</p>
+                {activeTruck.dockNumber && <p className="text-sm text-blue-600 font-medium"><strong>{t('dockNumber', lang)}:</strong> {activeTruck.dockNumber}</p>}
+                {activeTruck.expectedArrival && <p className="text-sm"><strong>{t('expectedArrival', lang)}:</strong> {formatDate(activeTruck.expectedArrival)}</p>}
+              </div>
+              {activeTruck.status === 'expected' ? (
+                <Button onClick={() => confirmArrival(activeTruck)} className="w-full bg-blue-500 hover:bg-blue-600 text-white">
+                  <MapPin className="h-4 w-4 mr-2" /> {t('confirmArrival', lang)}
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 text-green-600 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <CheckCircle2 className="h-5 w-5" /> <span className="font-medium">{t('arrivalConfirmed', lang)}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 2: Pre-loading Inspection */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <h4 className="font-semibold flex items-center gap-2"><Eye className="h-5 w-5 text-amber-500" /> {t('stepPreLoading', lang)}</h4>
+              
+              {/* Photo BEFORE loading */}
+              <div>
+                <Label className="flex items-center gap-2 mb-2"><Camera className="h-4 w-4" /> {t('photoBeforeLoading', lang)}</Label>
+                {!stepData.photoBefore ? (
+                  <label className="cursor-pointer flex items-center justify-center gap-2 p-6 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
+                    <Camera className="h-8 w-8 text-slate-400" />
+                    <span className="text-sm text-slate-500">{uploading ? t('loading', lang) + '...' : t('takePhoto', lang)}</span>
+                    <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={(e) => handlePhotoCapture(e, 'photoBefore')} disabled={uploading} />
+                  </label>
+                ) : (
+                  <div className="relative">
+                    <img src={stepData.photoBefore} alt="Before loading" className="w-full h-48 object-cover rounded-lg border" />
+                    <button onClick={() => setStepData(p => ({ ...p, photoBefore: '' }))} className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"><X className="h-3 w-3" /></button>
+                  </div>
+                )}
+              </div>
+
+              {/* Inspection checkbox */}
+              <div className="flex items-start gap-3 p-4 rounded-lg border">
+                <Checkbox id="load-inspected" checked={stepData.loadAreaInspected} onCheckedChange={(v) => setStepData(p => ({ ...p, loadAreaInspected: !!v }))} />
+                <label htmlFor="load-inspected" className="text-sm font-medium leading-tight cursor-pointer">{t('loadAreaInspected', lang)}</label>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Loading */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <h4 className="font-semibold flex items-center gap-2"><Package className="h-5 w-5 text-amber-500" /> {t('stepLoading', lang)}</h4>
+              
+              <div className="flex items-start gap-3 p-4 rounded-lg border">
+                <Checkbox id="items-loaded" checked={stepData.itemsLoaded} onCheckedChange={(v) => setStepData(p => ({ ...p, itemsLoaded: !!v }))} />
+                <label htmlFor="items-loaded" className="text-sm font-medium leading-tight cursor-pointer">{t('confirmItemsLoaded', lang)}</label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label>{t('grossWeightKg', lang)}</Label><Input type="number" placeholder="0" value={stepData.grossWeight} onChange={(e) => setStepData(p => ({ ...p, grossWeight: e.target.value }))} /></div>
+                <div><Label>{t('netWeightKg', lang)}</Label><Input type="number" placeholder="0" value={stepData.netWeight} onChange={(e) => setStepData(p => ({ ...p, netWeight: e.target.value }))} /></div>
+              </div>
+              <div><Label>{t('notes', lang)}</Label><Textarea placeholder={t('loadingNotes', lang) || 'Loading notes...'} value={stepData.loadingNotes} onChange={(e) => setStepData(p => ({ ...p, loadingNotes: e.target.value }))} rows={3} /></div>
+            </div>
+          )}
+
+          {/* Step 4: Securing */}
+          {step === 4 && (
+            <div className="space-y-4">
+              <h4 className="font-semibold flex items-center gap-2"><Shield className="h-5 w-5 text-amber-500" /> {t('stepSecuring', lang)}</h4>
+              
+              <div className="flex items-start gap-3 p-4 rounded-lg border">
+                <Checkbox id="load-secured" checked={stepData.loadSecured} onCheckedChange={(v) => setStepData(p => ({ ...p, loadSecured: !!v }))} />
+                <label htmlFor="load-secured" className="text-sm font-medium leading-tight cursor-pointer">{t('loadSecuredStraps', lang)}</label>
+              </div>
+
+              {/* Photo DURING loading */}
+              <div>
+                <Label className="flex items-center gap-2 mb-2"><Camera className="h-4 w-4" /> {t('photoDuringLoading', lang)}</Label>
+                {!stepData.photoDuring ? (
+                  <label className="cursor-pointer flex items-center justify-center gap-2 p-6 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
+                    <Camera className="h-8 w-8 text-slate-400" />
+                    <span className="text-sm text-slate-500">{uploading ? t('loading', lang) + '...' : t('takePhoto', lang)}</span>
+                    <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={(e) => handlePhotoCapture(e, 'photoDuring')} disabled={uploading} />
+                  </label>
+                ) : (
+                  <div className="relative">
+                    <img src={stepData.photoDuring} alt="During loading" className="w-full h-48 object-cover rounded-lg border" />
+                    <button onClick={() => setStepData(p => ({ ...p, photoDuring: '' }))} className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"><X className="h-3 w-3" /></button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Step 5: Post-loading */}
+          {step === 5 && (
+            <div className="space-y-4">
+              <h4 className="font-semibold flex items-center gap-2"><Camera className="h-5 w-5 text-amber-500" /> {t('stepPostLoading', lang)}</h4>
+              
+              {/* Photo AFTER loading */}
+              <div>
+                <Label className="flex items-center gap-2 mb-2"><Camera className="h-4 w-4" /> {t('photoAfterLoading', lang)}</Label>
+                {!stepData.photoAfter ? (
+                  <label className="cursor-pointer flex items-center justify-center gap-2 p-6 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
+                    <Camera className="h-8 w-8 text-slate-400" />
+                    <span className="text-sm text-slate-500">{uploading ? t('loading', lang) + '...' : t('takePhoto', lang)}</span>
+                    <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={(e) => handlePhotoCapture(e, 'photoAfter')} disabled={uploading} />
+                  </label>
+                ) : (
+                  <div className="relative">
+                    <img src={stepData.photoAfter} alt="After loading" className="w-full h-48 object-cover rounded-lg border" />
+                    <button onClick={() => setStepData(p => ({ ...p, photoAfter: '' }))} className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"><X className="h-3 w-3" /></button>
+                  </div>
+                )}
+              </div>
+
+              {/* Final confirmation + Signature */}
+              <div className="p-4 rounded-lg border bg-amber-50 dark:bg-amber-900/20">
+                <p className="font-medium text-sm mb-3">{t('finalConfirmation', lang)}</p>
+                <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                  <p>✓ {t('loadAreaInspected', lang)}</p>
+                  <p>✓ {t('confirmItemsLoaded', lang)}</p>
+                  <p>✓ {t('loadSecuredStraps', lang)}</p>
+                </div>
+              </div>
+
+              {/* Signature Pad */}
+              <div>
+                <Label className="mb-2 block">{t('signatureRequired', lang)}</Label>
+                <div className="border-2 border-dashed border-slate-300 rounded-xl p-2 bg-white">
+                  <canvas ref={canvasRef} width={400} height={120} className="w-full touch-none cursor-crosshair"
+                    onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
+                    onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
+                </div>
+                <div className="flex justify-between mt-1">
+                  <p className="text-xs text-muted-foreground">{t('pleaseSign', lang)}</p>
+                  <Button variant="ghost" size="sm" onClick={clearSignature} className="text-xs h-6">{t('clearSignature', lang)}</Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 6: Complete */}
+          {step === 6 && (
+            <div className="space-y-4 text-center">
+              <div className="w-16 h-16 mx-auto bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
+              </div>
+              <h4 className="font-semibold text-lg">{t('processComplete', lang)}</h4>
+              
+              <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-left space-y-2">
+                <h5 className="font-medium text-sm">{t('loadingSummary', lang)}</h5>
+                <p className="text-sm"><strong>{t('driverName', lang)}:</strong> {activeTruck.driverName}</p>
+                <p className="text-sm"><strong>{t('truckPlate', lang)}:</strong> {activeTruck.truckPlate}</p>
+                {stepData.grossWeight && <p className="text-sm"><strong>{t('grossWeightKg', lang)}:</strong> {parseFloat(stepData.grossWeight).toLocaleString()}</p>}
+                {stepData.netWeight && <p className="text-sm"><strong>{t('netWeightKg', lang)}:</strong> {parseFloat(stepData.netWeight).toLocaleString()}</p>}
+              </div>
+
+              <div className="flex gap-2 justify-center">
+                <Button variant="outline" onClick={() => { setStep(0); setActiveTruck(null); }}>{t('close', lang)}</Button>
+                <Button onClick={() => window.print()} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
+                  <Download className="h-4 w-4 mr-2" /> {t('printLoadingOrder', lang)}
+                </Button>
+              </div>
+
+              {/* Hidden print view */}
+              <div className="hidden">
+                <DocumentPrintView doc={null} truck={activeTruck} />
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Navigation Buttons */}
+      {step < 6 && (
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={() => { if (step === 1) { setStep(0); setActiveTruck(null); } else setStep(step - 1); }} disabled={step === 0}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> {t('back', lang)}
+          </Button>
+          {step < 5 ? (
+            <Button onClick={() => setStep(step + 1)} disabled={!canAdvanceStep()} className="bg-amber-500 hover:bg-amber-600 text-white">
+              {t('next', lang)} <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          ) : step === 5 ? (
+            <Button onClick={completeDelivery} disabled={!canAdvanceStep()} className="bg-green-500 hover:bg-green-600 text-white">
+              <CheckCircle2 className="h-4 w-4 mr-1" /> {t('confirmDelivery', lang)}
+            </Button>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

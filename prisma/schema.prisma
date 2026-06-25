@@ -123,6 +123,13 @@ model Document {
   content        String?
   photos         String?
   notes          String?
+  orderNumber    String?
+  customerName   String?
+  transportCode  String?
+  lotNumber      String?
+  grossWeight    Float?
+  netWeight      Float?
+  instructions   String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
@@ -182,6 +189,11 @@ model TruckVisit {
   blReference      String?
   bookingRef       String?
   notes            String?
+  lotNumber        String?
+  transportCode    String?
+  grossWeight      Float?
+  netWeight        Float?
+  instructions     String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

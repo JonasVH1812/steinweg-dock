@@ -51,8 +51,8 @@ export async function POST(req: NextRequest) {
     const data = await req.json();
     const id = generateId();
     const result = await query(
-      `INSERT INTO "Document" ("id", "docType", "reference", "status", "cargoOpId", "truckVisitId", "content", "photos", "notes") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [id, data.docType, data.reference, data.status || 'draft', data.cargoOpId || null, data.truckVisitId || null, data.content || null, data.photos || null, data.notes || null]
+      `INSERT INTO "Document" ("id", "docType", "reference", "status", "cargoOpId", "truckVisitId", "content", "photos", "notes", "lotNumber", "grossWeight", "netWeight", "preparedBy", "checkedBy", "orderNumber", "customerName", "transportCode", "instructions", "barcode") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING *`,
+      [id, data.docType, data.reference, data.status || 'draft', data.cargoOpId || null, data.truckVisitId || null, data.content || null, data.photos || null, data.notes || null, data.lotNumber || null, data.grossWeight || null, data.netWeight || null, data.preparedBy || null, data.checkedBy || null, data.orderNumber || null, data.customerName || null, data.transportCode || null, data.instructions || null, data.barcode || null]
     );
     return NextResponse.json({ ...result.rows[0], signatures: [] });
   } catch (error: unknown) {
