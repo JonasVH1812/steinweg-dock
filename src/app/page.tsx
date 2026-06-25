@@ -49,6 +49,56 @@ const formatDate = (d: string | null) => d ? new Date(d).toLocaleString('nl-BE',
 const formatTime = (d: string | null) => d ? new Date(d).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' }) : '-';
 const timeSince = (d: string) => { const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000); if (s < 60) return `${s}s`; if (s < 3600) return `${Math.floor(s/60)}m`; if (s < 86400) return `${Math.floor(s/3600)}h`; return `${Math.floor(s/86400)}d`; };
 
+// Translate a status value to the user's language
+const statusLabel = (status: string, lang: Language): string => {
+  const map: Record<string, string> = {
+    pending: t('pendingCargo', lang),
+    in_progress: t('inProgressCargo', lang),
+    active: t('active', lang),
+    completed: t('completedCargo', lang),
+    approved: t('approved', lang),
+    signed: t('signed', lang),
+    draft: t('draft', lang),
+    pending_review: t('pendingReview', lang),
+    failed: t('error', lang),
+    cancelled: t('cancel', lang),
+    ended: t('completedCargo', lang),
+    break: t('cancelling', lang),
+    expected: t('expectedTrucks', lang),
+    arrived: t('arrivedAt', lang),
+    at_dock: t('atDockTrucks', lang),
+    loading: t('loading', lang),
+    archived: t('inactive', lang),
+  };
+  return map[status] || status.replace(/_/g, ' ');
+};
+
+const filterLabel = (f: string, lang: Language): string => {
+  if (f === 'all') return t('filter', lang);
+  return statusLabel(f, lang);
+};
+
+const roleLabel = (role: string, lang: Language): string => {
+  const map: Record<string, string> = {
+    dock_worker: t('totalWorkers', lang),
+    chauffeur: t('totalChauffeurs', lang),
+    admin: t('adminUsers', lang),
+  };
+  return map[role] || role;
+};
+
+const notifCategoryLabel = (cat: string, lang: Language): string => {
+  const map: Record<string, string> = {
+    safety: t('safety', lang),
+    cargo: t('cargo', lang),
+    truck: t('trucks', lang),
+    document: t('documents', lang),
+    shift: t('shifts', lang),
+    system: t('settings', lang),
+  };
+  return map[cat] || cat;
+};
+
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
   in_progress: 'bg-blue-100 text-blue-800 border-blue-300',
@@ -218,7 +268,7 @@ function LoginScreen() {
                       </Avatar>
                       <div className="flex-1">
                         <p className="text-white font-semibold">{user.name}</p>
-                        <p className="text-slate-400 text-sm">{user.badge} — {user.role === 'dock_worker' ? 'Dock Worker' : user.role === 'chauffeur' ? 'Chauffeur' : 'Admin'}</p>
+                        <p className="text-slate-400 text-sm">{user.badge} — {roleLabel(user.role, lang)}</p>
                       </div>
                       <ChevronRight className="h-5 w-5 text-slate-500 group-hover:text-amber-500 transition-colors" />
                     </button>
@@ -236,8 +286,8 @@ function LoginScreen() {
         <div className="mt-6 grid grid-cols-3 gap-3">
           {[
             { icon: <Shield className="h-5 w-5" />, label: t('safety', lang) },
-            { icon: <FileText className="h-5 w-5" />, label: 'Paperless' },
-            { icon: <Clock className="h-5 w-5" />, label: 'Real-time' },
+            { icon: <FileText className="h-5 w-5" />, label: t('documents', lang) },
+            { icon: <Clock className="h-5 w-5" />, label: t('recentActivity', lang) },
           ].map((f, i) => (
             <div key={i} className="text-center p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
               <div className="text-amber-500 flex justify-center mb-1">{f.icon}</div>
@@ -316,7 +366,7 @@ function SidebarNav() {
             <div className="flex-1 min-w-0">
               <p className="text-white font-medium text-sm truncate">{currentUser?.name}</p>
               <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-400 bg-amber-500/10">
-                {currentRole === 'dock_worker' ? 'Dock Worker' : currentRole === 'chauffeur' ? 'Chauffeur' : 'Admin'}
+                {roleLabel(currentRole, lang)}
               </Badge>
             </div>
           </div>
@@ -408,7 +458,7 @@ function QuickNotifications() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm">{n.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{timeSince(n.createdAt)} ago</p>
+                  <p className="text-xs text-muted-foreground mt-1">{timeSince(n.createdAt)}</p>
                 </div>
               </div>
             ))
@@ -489,7 +539,7 @@ function Dashboard() {
                     <p className="font-medium text-sm truncate">{op.vesselName}</p>
                     <p className="text-xs text-muted-foreground">{op.operationType} — {t('berthNumber', lang)} {op.berthNumber}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge className={statusColors[op.status] || ''} variant="outline">{op.status.replace('_', ' ')}</Badge>
+                      <Badge className={statusColors[op.status] || ''} variant="outline">{statusLabel(op.status, lang)}</Badge>
                       {op.weight && <span className="text-xs text-muted-foreground">{op.weight.toLocaleString()} kg</span>}
                     </div>
                   </div>
@@ -515,7 +565,7 @@ function Dashboard() {
                     <p className="font-medium text-sm">{tv.driverName}</p>
                     <p className="text-xs text-muted-foreground">{tv.truckPlate} — {tv.company}</p>
                   </div>
-                  <Badge className={statusColors[tv.status] || ''} variant="outline">{tv.status.replace('_', ' ')}</Badge>
+                  <Badge className={statusColors[tv.status] || ''} variant="outline">{statusLabel(tv.status, lang)}</Badge>
                 </div>
               ))
             }
@@ -697,7 +747,7 @@ function ShiftManagement() {
                   <p className="text-xs text-muted-foreground">{s.type} {t('shifts', lang)} — {s.location || t('location', lang)}</p>
                 </div>
                 <div className="text-right">
-                  <Badge className={statusColors[s.status] || ''} variant="outline">{s.status}</Badge>
+                  <Badge className={statusColors[s.status] || ''} variant="outline">{statusLabel(s.status, lang)}</Badge>
                   <p className="text-xs text-muted-foreground mt-1">{formatTime(s.checkIn)} — {s.checkOut ? formatTime(s.checkOut) : '...'}</p>
                 </div>
               </div>
@@ -762,7 +812,7 @@ function CargoOperations() {
       <div className="flex flex-wrap items-center gap-2">
         {['all', 'pending', 'in_progress', 'completed'].map(f => (
           <Button key={f} variant={filter === f ? 'default' : 'outline'} size="sm" onClick={() => setFilter(f)} className={filter === f ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}>
-            {f === 'all' ? 'All' : f.replace('_', ' ')}
+            {filterLabel(f, lang)}
           </Button>
         ))}
         <div className="flex-1" />
@@ -837,7 +887,7 @@ function CargoOperations() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold truncate">{op.vesselName || t('vesselName', lang)}</h3>
-                      <Badge className={statusColors[op.status] || ''} variant="outline">{op.status.replace('_', ' ')}</Badge>
+                      <Badge className={statusColors[op.status] || ''} variant="outline">{statusLabel(op.status, lang)}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mt-0.5">{op.operationType} — {op.cargoType} — {t('berthNumber', lang)} {op.berthNumber || '-'}</p>
                     <p className="text-sm text-muted-foreground truncate">{op.description}</p>
@@ -958,7 +1008,7 @@ function DocumentManagement() {
 
   const docTypeLabels: Record<string, string> = {
     bill_of_lading: t('billOfLading', lang), delivery_note: t('deliveryNote', lang), damage_report: t('damageReport', lang),
-    customs: t('customsDoc', lang), packing_list: 'Packing List', weigh_bridge: 'Weigh Bridge Ticket',
+    customs: t('customsDoc', lang), packing_list: t('tallySheet', lang), weigh_bridge: t('tallySheet', lang),
   };
 
   const docTypeIcons: Record<string, React.ReactNode> = {
@@ -975,7 +1025,7 @@ function DocumentManagement() {
       <div className="flex flex-wrap items-center gap-2">
         {['all', 'draft', 'pending_review', 'approved', 'signed'].map(f => (
           <Button key={f} variant={filter === f ? 'default' : 'outline'} size="sm" onClick={() => setFilter(f)} className={filter === f ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}>
-            {f === 'all' ? 'All' : f.replace('_', ' ')}
+            {filterLabel(f, lang)}
           </Button>
         ))}
         <div className="flex-1" />
@@ -995,7 +1045,7 @@ function DocumentManagement() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-sm">{docTypeLabels[doc.docType] || doc.docType}</h3>
-                    <Badge className={statusColors[doc.status] || ''} variant="outline">{doc.status.replace('_', ' ')}</Badge>
+                    <Badge className={statusColors[doc.status] || ''} variant="outline">{statusLabel(doc.status, lang)}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{t('reference', lang)}: {doc.reference}</p>
                   {doc.content && (() => { try { const p = JSON.parse(doc.content); return <p className="text-xs text-muted-foreground mt-1 truncate max-w-lg">{Object.entries(p).slice(0,3).map(([k,v]) => `${k}: ${v}`).join(' · ')}</p>; } catch { return <p className="text-xs text-muted-foreground mt-1 truncate max-w-lg">{doc.content}</p>; } })()}
@@ -1010,7 +1060,7 @@ function DocumentManagement() {
                   <p className="text-xs text-muted-foreground">{formatDate(doc.createdAt)}</p>
                   {doc.status !== 'signed' && doc.status !== 'archived' && (
                     <Button size="sm" variant="outline" className="mt-2 text-xs" onClick={(e) => { e.stopPropagation(); signDoc(doc.id); }}>
-                      <Signature className="h-3 w-3 mr-1" /> Sign
+                      <Signature className="h-3 w-3 mr-1" /> {t('signDocument', lang)}
                     </Button>
                   )}
                 </div>
@@ -1147,8 +1197,8 @@ function SafetyChecklists() {
   };
 
   const clTypeLabels: Record<string, string> = {
-    pre_shift: t('preShift', lang), dock_safety: 'Dock Safety', equipment: t('equipment', lang),
-    hazardous_cargo: 'Hazardous Cargo', crane_lift: 'Crane/Lift Safety',
+    pre_shift: t('preShift', lang), dock_safety: t('safety', lang), equipment: t('equipment', lang),
+    hazardous_cargo: t('safety', lang), crane_lift: t('safety', lang),
   };
 
   return (
@@ -1245,7 +1295,7 @@ function SafetyChecklists() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-sm">{clTypeLabels[cl.checkType] || cl.checkType}</h3>
-                        <Badge className={statusColors[cl.status] || ''} variant="outline">{cl.status}</Badge>
+                        <Badge className={statusColors[cl.status] || ''} variant="outline">{statusLabel(cl.status, lang)}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">{cl.location} — {cl.user?.name}</p>
                       <div className="mt-2">
@@ -1396,7 +1446,7 @@ function TruckVisits() {
               <div><Label>{t('purpose', lang)}</Label>
                 <Select value={newTruck.purpose} onValueChange={(v) => setNewTruck(p => ({ ...p, purpose: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="delivery">{t('delivery', lang)}</SelectItem><SelectItem value="pickup">{t('pickup', lang)}</SelectItem><SelectItem value="both">Both</SelectItem></SelectContent>
+                  <SelectContent><SelectItem value="delivery">{t('delivery', lang)}</SelectItem><SelectItem value="pickup">{t('pickup', lang)}</SelectItem><SelectItem value="both">{t('delivery', lang)} + {t('pickup', lang)}</SelectItem></SelectContent>
                 </Select>
               </div>
               <div><Label>{t('cargoDescription', lang)}</Label><Textarea placeholder="What cargo..." value={newTruck.cargoDescription} onChange={(e) => setNewTruck(p => ({ ...p, cargoDescription: e.target.value }))} /></div>
@@ -1422,7 +1472,7 @@ function TruckVisits() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-sm">{tv.driverName}</h3>
-                    <Badge className={statusColors[tv.status] || ''} variant="outline">{tv.status.replace('_', ' ')}</Badge>
+                    <Badge className={statusColors[tv.status] || ''} variant="outline">{statusLabel(tv.status, lang)}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{tv.truckPlate} {tv.trailerPlate && `/ ${tv.trailerPlate}`} — {tv.company}</p>
                   <p className="text-sm text-muted-foreground">{tv.purpose} — {tv.cargoDescription}</p>
@@ -1435,7 +1485,7 @@ function TruckVisits() {
                 <div className="shrink-0">
                   {statusFlow[tv.status] && (
                     <Button size="sm" onClick={() => advanceStatus(tv.id, tv.status)} className="bg-blue-500 hover:bg-blue-600 text-white">
-                      <ArrowRight className="h-4 w-4 mr-1" /> {statusFlow[tv.status][0].replace('_', ' ')}
+                      <ArrowRight className="h-4 w-4 mr-1" /> {statusLabel(statusFlow[tv.status][0], lang)}
                     </Button>
                   )}
                 </div>
@@ -1459,7 +1509,7 @@ function WarehouseView() {
     fetch('/api/warehouses').then(r => r.json()).then(setWarehouses);
   }, []);
 
-  const typeLabels: Record<string, string> = { general: 'General', cold: 'Cold Storage', hazardous: 'Hazardous', bulk: t('bulk', lang) };
+  const typeLabels: Record<string, string> = { general: t('breakbulk', lang), cold: t('cargoType', lang), hazardous: t('safety', lang), bulk: t('bulk', lang) };
   const typeColors: Record<string, string> = { general: 'from-blue-500 to-cyan-500', cold: 'from-cyan-500 to-blue-600', hazardous: 'from-red-500 to-orange-500', bulk: 'from-amber-500 to-yellow-500' };
 
   return (
@@ -1480,7 +1530,7 @@ function WarehouseView() {
           <CardContent>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">{t('cargoType', lang)}</p><p className="font-semibold">{typeLabels[selectedWh.type]}</p></div>
-              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">{t('capacity', lang)}</p><p className="font-semibold">{selectedWh.capacity?.toLocaleString() || '-'} slots</p></div>
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">{t('unitCount', lang)}</p><p className="font-semibold">{selectedWh.capacity?.toLocaleString() || '-'}</p></div>
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">{t('area', lang)}</p><p className="font-semibold">{selectedWh.area?.toLocaleString() || '-'} m²</p></div>
             </div>
             <h4 className="font-semibold text-sm mb-3">{t('storageLocation', lang)}</h4>
@@ -1578,10 +1628,10 @@ function NotificationsView() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-sm">{n.title}</h3>
-                    {n.category && <Badge variant="outline" className="text-xs">{n.category}</Badge>}
+                    {n.category && <Badge variant="outline" className="text-xs">{notifCategoryLabel(n.category, lang)}</Badge>}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">{n.message}</p>
-                  <p className="text-xs text-muted-foreground mt-2">{timeSince(n.createdAt)} ago</p>
+                  <p className="text-xs text-muted-foreground mt-2">{timeSince(n.createdAt)}</p>
                 </div>
                 {!n.read && <Button variant="ghost" size="sm" onClick={() => markRead(n.id)}><Eye className="h-4 w-4" /></Button>}
               </div>
@@ -1721,9 +1771,9 @@ function AdminPanel() {
                   <Select value={newUser.role} onValueChange={v => setNewUser({...newUser, role: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="dock_worker">Dock Worker</SelectItem>
-                      <SelectItem value="chauffeur">Chauffeur</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="dock_worker">{roleLabel('dock_worker', lang)}</SelectItem>
+                      <SelectItem value="chauffeur">{roleLabel('chauffeur', lang)}</SelectItem>
+                      <SelectItem value="admin">{roleLabel('admin', lang)}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1749,9 +1799,9 @@ function AdminPanel() {
                     <Select value={editUser.role} onValueChange={v => setEditUser({...editUser, role: v})}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="dock_worker">Dock Worker</SelectItem>
-                        <SelectItem value="chauffeur">Chauffeur</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="dock_worker">{roleLabel('dock_worker', lang)}</SelectItem>
+                        <SelectItem value="chauffeur">{roleLabel('chauffeur', lang)}</SelectItem>
+                        <SelectItem value="admin">{roleLabel('admin', lang)}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1782,7 +1832,7 @@ function AdminPanel() {
                     <tr key={u.id} className="border-t hover:bg-slate-50 dark:hover:bg-slate-800/50">
                       <td className="p-3 font-medium">{u.name}</td>
                       <td className="p-3 text-slate-600">{u.email}</td>
-                      <td className="p-3"><Badge variant="outline" className={u.role === 'admin' ? 'border-amber-500 text-amber-600' : u.role === 'chauffeur' ? 'border-blue-500 text-blue-600' : 'border-green-500 text-green-600'}>{u.role}</Badge></td>
+                      <td className="p-3"><Badge variant="outline" className={u.role === 'admin' ? 'border-amber-500 text-amber-600' : u.role === 'chauffeur' ? 'border-blue-500 text-blue-600' : 'border-green-500 text-green-600'}>{roleLabel(u.role, lang)}</Badge></td>
                       <td className="p-3">{u.badge || '-'}</td>
                       <td className="p-3"><Badge className={u.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>{u.active ? t('active', lang) : t('inactive', lang)}</Badge></td>
                       <td className="p-3">
@@ -1865,7 +1915,7 @@ function SettingsView() {
             <div>
               <p className="font-semibold text-lg">{currentUser?.name}</p>
               <p className="text-slate-500">{currentUser?.email}</p>
-              <Badge className="mt-1">{currentUser?.role}</Badge>
+              <Badge className="mt-1">{roleLabel(currentUser?.role, lang)}</Badge>
             </div>
           </div>
           {currentUser?.badge && <p className="text-sm text-slate-600">{t('badge', lang)}: {currentUser.badge}</p>}
@@ -1998,7 +2048,7 @@ function MyDeliveriesView() {
                 {tv.dockNumber && <p className="text-sm text-blue-600 font-medium">{t('dockNumber', lang)}: {tv.dockNumber}</p>}
                 {tv.company && <p className="text-sm text-slate-500">{tv.company}</p>}
               </div>
-              <Badge className={statusColors[tv.status] || 'bg-gray-100 text-gray-800'}>{tv.status.replace(/_/g, ' ')}</Badge>
+              <Badge className={statusColors[tv.status] || 'bg-gray-100 text-gray-800'}>{statusLabel(tv.status, lang)}</Badge>
             </div>
             {tv.blReference && <p className="text-xs text-slate-400 mt-2">{t('blReference', lang)}: {tv.blReference}</p>}
             {tv.bookingRef && <p className="text-xs text-slate-400">{t('bookingRef', lang)}: {tv.bookingRef}</p>}
