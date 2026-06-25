@@ -114,7 +114,7 @@ function LoginScreen() {
   const seedDb = async () => {
     setSeedLoading(true);
     const res = await fetch('/api/setup', { method: 'POST' });
-    if (res.ok) { setSeeded(true); await fetchUsers(); toast({ title: 'Database seeded', description: 'Demo data loaded successfully' }); }
+    if (res.ok) { setSeeded(true); await fetchUsers(); toast({ title: t('success', lang), description: t('loadDemo', lang) }); }
     setSeedLoading(false);
   };
 
@@ -146,11 +146,11 @@ function LoginScreen() {
           setCurrentUser(user);
           setCurrentRole(user.role as UserRole);
         } else {
-          setLoginError('User not found');
+          setLoginError(t('invalidLogin', lang));
         }
       }
     } else {
-      setLoginError('Invalid email or password');
+      setLoginError(t('invalidLogin', lang));
     }
     setLoading(false);
   };
@@ -162,16 +162,16 @@ function LoginScreen() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 mb-4 shadow-lg shadow-orange-500/25">
             <Anchor className="h-10 w-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Steinweg Dock</h1>
-          <p className="text-slate-400 mt-2">C. Steinweg Belgium N.V. — Port of Antwerp</p>
-          <p className="text-slate-500 text-sm mt-1">Digital Dock Management System</p>
+          <h1 className="text-3xl font-bold text-white">{t('appName', lang)}</h1>
+          <p className="text-slate-400 mt-2">{t('appSubtitle', lang)}</p>
+          <p className="text-slate-500 text-sm mt-1">{t('digitalDock', lang)}</p>
         </div>
 
         {!seeded ? (
           <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
             <CardHeader className="text-center">
-              <CardTitle className="text-white">Welcome</CardTitle>
-              <CardDescription className="text-slate-400">Load demo data to get started</CardDescription>
+              <CardTitle className="text-white">{t('welcome', lang)}</CardTitle>
+              <CardDescription className="text-slate-400">{t('loadDemo', lang)}</CardDescription>
             </CardHeader>
             <CardContent>
               <Button onClick={seedDb} disabled={seedLoading} className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white h-12 text-lg">
@@ -182,9 +182,9 @@ function LoginScreen() {
         ) : (
           <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
             <CardHeader className="text-center">
-              <CardTitle className="text-white">Sign In</CardTitle>
+              <CardTitle className="text-white">{t('signIn', lang)}</CardTitle>
               <CardDescription className="text-slate-400">
-                {showEmailLogin ? 'Enter your credentials' : 'Choose your profile to continue'}
+                {showEmailLogin ? t('enterCredentials', lang) : t('chooseProfile', lang)}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -195,15 +195,15 @@ function LoginScreen() {
                     <Input type="email" placeholder="worker1@steinweg.be" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-slate-700 border-slate-600 text-white" required />
                   </div>
                   <div>
-                    <Label className="text-slate-300">Password</Label>
+                    <Label className="text-slate-300">{t('password', lang)}</Label>
                     <Input type="password" placeholder="••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-slate-700 border-slate-600 text-white" required />
                   </div>
                   {loginError && <p className="text-red-400 text-sm">{loginError}</p>}
                   <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white">
-                    {loading ? 'Signing in...' : 'Sign In'}
+                    {loading ? t('signIn', lang) + '...' : t('signIn', lang)}
                   </Button>
                   <button type="button" onClick={() => setShowEmailLogin(false)} className="w-full text-center text-slate-400 hover:text-amber-400 text-sm">
-                    ← Back to profiles
+                    {t('backToProfiles', lang)}
                   </button>
                 </form>
               ) : (
@@ -225,7 +225,7 @@ function LoginScreen() {
                   ))}
                   <Separator className="bg-slate-600" />
                   <button onClick={() => setShowEmailLogin(true)} className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-slate-600 text-slate-400 hover:text-white hover:border-amber-500/50 transition-all text-sm">
-                    <User className="h-4 w-4" /> Sign in with email & password
+                    <User className="h-4 w-4" /> {t('orEmail', lang)}
                   </button>
                 </>
               )}
@@ -235,7 +235,7 @@ function LoginScreen() {
 
         <div className="mt-6 grid grid-cols-3 gap-3">
           {[
-            { icon: <Shield className="h-5 w-5" />, label: 'Safety First' },
+            { icon: <Shield className="h-5 w-5" />, label: t('safety', lang) },
             { icon: <FileText className="h-5 w-5" />, label: 'Paperless' },
             { icon: <Clock className="h-5 w-5" />, label: 'Real-time' },
           ].map((f, i) => (
@@ -298,7 +298,7 @@ function SidebarNav() {
             <Anchor className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h2 className="text-white font-bold text-sm">Steinweg Dock</h2>
+            <h2 className="text-white font-bold text-sm">{t('appName', lang)}</h2>
             <p className="text-slate-500 text-xs">Port of Antwerp</p>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="ml-auto lg:hidden text-slate-400 hover:text-white">
@@ -398,10 +398,10 @@ function QuickNotifications() {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{t('notifications', lang)}</DialogTitle>
-          <DialogDescription>Recent alerts and updates</DialogDescription>
+          <DialogDescription>{t('recentActivity', lang)}</DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-80">
-          {notifs.length === 0 ? <p className="text-center text-muted-foreground py-8">t('noResults', lang)</p> :
+          {notifs.length === 0 ? <p className="text-center text-muted-foreground py-8">{t('noResults', lang)}</p> :
             notifs.map(n => (
               <div key={n.id} className={`flex gap-3 p-3 rounded-lg mb-2 ${n.read ? 'opacity-60' : 'bg-slate-50 dark:bg-slate-800'}`}>
                 <div className="mt-0.5">{notifIcons[n.type] || <Info className="h-4 w-4" />}</div>
@@ -487,7 +487,7 @@ function Dashboard() {
                   <div className="mt-1 text-blue-500">{cargoTypeIcons[op.cargoType || ''] || <Package className="h-4 w-4" />}</div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{op.vesselName}</p>
-                    <p className="text-xs text-muted-foreground">{op.operationType} — Berth {op.berthNumber}</p>
+                    <p className="text-xs text-muted-foreground">{op.operationType} — {t('berthNumber', lang)} {op.berthNumber}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge className={statusColors[op.status] || ''} variant="outline">{op.status.replace('_', ' ')}</Badge>
                       {op.weight && <span className="text-xs text-muted-foreground">{op.weight.toLocaleString()} kg</span>}
@@ -593,7 +593,7 @@ function ShiftManagement() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: currentUser.id, type: newShift.type, location: newShift.location, status: 'active' }),
     });
-    if (res.ok) { toast({ title: 'Checked In', description: `Shift started at ${newShift.location}` }); setCheckInDialog(false); loadShifts(); }
+    if (res.ok) { toast({ title: t('checkIn', lang), description: `Shift started at ${newShift.location}` }); setCheckInDialog(false); loadShifts(); }
   };
 
   const checkOut = async () => {
@@ -603,19 +603,19 @@ function ShiftManagement() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: activeShift.id, status: 'ended', checkOut: new Date().toISOString() }),
     });
-    if (res.ok) { toast({ title: 'Checked Out', description: 'Shift ended' }); loadShifts(); }
+    if (res.ok) { toast({ title: t('checkOut', lang), description: t('endShift', lang) }); loadShifts(); }
   };
 
   const startBreak = async () => {
     if (!activeShift) return;
     const res = await fetch('/api/shifts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: activeShift.id, status: 'break' }) });
-    if (res.ok) { toast({ title: 'Break Started' }); loadShifts(); }
+    if (res.ok) { toast({ title: t('startShift', lang) }); loadShifts(); }
   };
 
   const endBreak = async () => {
     if (!activeShift) return;
     const res = await fetch('/api/shifts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: activeShift.id, status: 'active' }) });
-    if (res.ok) { toast({ title: 'Break Ended' }); loadShifts(); }
+    if (res.ok) { toast({ title: t('endShift', lang) }); loadShifts(); }
   };
 
   return (
@@ -626,11 +626,11 @@ function ShiftManagement() {
           <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-sm font-medium">Active Shift</p>
+                <p className="text-green-100 text-sm font-medium">{t('currentShift', lang)}</p>
                 <p className="text-2xl font-bold mt-1">{activeShift.type === 'day' ? t('day', lang) : t('night', lang)} Shift</p>
                 <div className="flex items-center gap-4 mt-2 text-green-100 text-sm">
                   <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {formatTime(activeShift.checkIn)}</span>
-                  <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {activeShift.location || 'Not assigned'}</span>
+                  <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {activeShift.location || t('location', lang)}</span>
                 </div>
               </div>
               <div className="text-right">
@@ -649,31 +649,31 @@ function ShiftManagement() {
                 </Button>
               )}
               <Button onClick={checkOut} variant="secondary" className="bg-red-500/80 hover:bg-red-500 text-white border-0">
-                <Square className="h-4 w-4 mr-2" /> Check Out
+                <Square className="h-4 w-4 mr-2" /> {t('checkOut', lang)}
               </Button>
             </div>
           </div>
         ) : (
           <div className="bg-gradient-to-r from-slate-600 to-slate-700 p-6 text-white text-center">
             <Timer className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="text-lg font-semibold">No Active Shift</p>
-            <p className="text-slate-300 text-sm mt-1">Check in to start your shift</p>
+            <p className="text-lg font-semibold">{t('shifts', lang)}</p>
+            <p className="text-slate-300 text-sm mt-1">{t('checkIn', lang)}</p>
             <Dialog open={checkInDialog} onOpenChange={setCheckInDialog}>
               <DialogTrigger asChild>
                 <Button className="mt-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white">
-                  <Clock className="h-4 w-4 mr-2" /> Check In
+                  <Clock className="h-4 w-4 mr-2" /> {t('checkIn', lang)}
                 </Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>Check In for Shift</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>{t('checkIn', lang)}</DialogTitle></DialogHeader>
                 <div className="space-y-4">
-                  <div><Label>Shift Type</Label>
+                  <div><Label>{t('shiftType', lang)}</Label>
                     <Select value={newShift.type} onValueChange={(v) => setNewShift(p => ({ ...p, type: v }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="day">Day Shift (06:00-14:00)</SelectItem><SelectItem value="night">Night Shift (14:00-22:00)</SelectItem></SelectContent>
+                      <SelectContent><SelectItem value="day">{t('day', lang)} Shift (06:00-14:00)</SelectItem><SelectItem value="night">{t('night', lang)} Shift (14:00-22:00)</SelectItem></SelectContent>
                     </Select>
                   </div>
-                  <div><Label>Location / Dock</Label>
+                  <div><Label>{t('location', lang)}</Label>
                     <Input placeholder="e.g. Quai 125, Berth 127" value={newShift.location} onChange={(e) => setNewShift(p => ({ ...p, location: e.target.value }))} />
                   </div>
                 </div>
@@ -686,15 +686,15 @@ function ShiftManagement() {
 
       {/* Shift History */}
       <Card>
-        <CardHeader><CardTitle className="text-lg">Recent Shifts</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">{t('shiftHistory', lang)}</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-2">
             {shifts.map(s => (
               <div key={s.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
                 <div className={`w-2 h-2 rounded-full ${s.status === 'active' ? 'bg-green-500' : s.status === 'break' ? 'bg-purple-500' : 'bg-gray-400'}`} />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm">{s.user?.name || 'Unknown'}</p>
-                  <p className="text-xs text-muted-foreground">{s.type} shift — {s.location || 'No location'}</p>
+                  <p className="font-medium text-sm">{s.user?.name || '—'}</p>
+                  <p className="text-xs text-muted-foreground">{s.type} {t('shifts', lang)} — {s.location || t('location', lang)}</p>
                 </div>
                 <div className="text-right">
                   <Badge className={statusColors[s.status] || ''} variant="outline">{s.status}</Badge>
@@ -734,7 +734,7 @@ function CargoOperations() {
   const createOp = async () => {
     await fetch('/api/cargo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...newOp, status: 'pending', assignedTo: currentUser?.id }) });
     setNewOpDialog(false);
-    toast({ title: 'Cargo Operation Created' });
+    toast({ title: t('success', lang), description: t('cargo', lang) });
     loadOps();
   };
 
@@ -743,7 +743,7 @@ function CargoOperations() {
     if (status === 'in_progress') data.startedAt = new Date().toISOString();
     if (status === 'completed') data.completedAt = new Date().toISOString();
     await fetch('/api/cargo', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    toast({ title: `Status updated to ${status}` });
+    toast({ title: t('success', lang) });
     loadOps();
   };
 
@@ -767,7 +767,7 @@ function CargoOperations() {
         ))}
         <div className="flex-1" />
         <Button onClick={() => setNewOpDialog(true)} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
-          <Plus className="h-4 w-4 mr-2" /> New Operation
+          <Plus className="h-4 w-4 mr-2" /> {t('add', lang)}
         </Button>
       </div>
 
@@ -781,16 +781,16 @@ function CargoOperations() {
                 </CardTitle>
                 <CardDescription>{selectedOp.operationType} — {selectedOp.description}</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedOp(null)}><ArrowLeft className="h-4 w-4 mr-1" /> Back</Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedOp(null)}><ArrowLeft className="h-4 w-4 mr-1" /> {t('details', lang)}</Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: 'Voyage', value: selectedOp.voyageNumber },
-                { label: 'Berth', value: selectedOp.berthNumber },
-                { label: 'Reference', value: selectedOp.reference },
-                { label: 'Weight', value: selectedOp.weight ? `${selectedOp.weight.toLocaleString()} kg` : '-' },
+                { label: t('voyageNumber', lang), value: selectedOp.voyageNumber },
+                { label: t('berthNumber', lang), value: selectedOp.berthNumber },
+                { label: t('reference', lang), value: selectedOp.reference },
+                { label: t('weight', lang), value: selectedOp.weight ? `${selectedOp.weight.toLocaleString()} kg` : '-' },
               ].map((d, i) => (
                 <div key={i} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
                   <p className="text-xs text-muted-foreground">{d.label}</p>
@@ -806,14 +806,14 @@ function CargoOperations() {
 
             {/* Cargo Items / Tally */}
             <div>
-              <h3 className="font-semibold mb-3 flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Cargo Tally ({selectedOp.items?.length || 0} items)</h3>
+              <h3 className="font-semibold mb-3 flex items-center gap-2"><ClipboardList className="h-4 w-4" /> {t('tally', lang)} ({selectedOp.items?.length || 0})</h3>
               <div className="space-y-2">
                 {selectedOp.items?.map(item => (
                   <div key={item.id} className={`flex items-center gap-3 p-3 rounded-lg border ${item.checked ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-white dark:bg-slate-800'}`}>
                     <Checkbox checked={item.checked} onCheckedChange={() => toggleItemCheck(item)} />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm">{item.markOrNumber} — {item.itemType}</p>
-                      <p className="text-xs text-muted-foreground">{item.description} — Qty: {item.quantity}{item.weight ? ` / ${item.weight.toLocaleString()} kg` : ''}</p>
+                      <p className="text-xs text-muted-foreground">{item.description} — {t('quantity', lang)}: {item.quantity}{item.weight ? ` / ${item.weight.toLocaleString()} kg` : ''}</p>
                     </div>
                     <Badge className={item.condition === 'good' ? 'bg-green-100 text-green-800 border-green-300' : item.condition === 'damaged' ? 'bg-red-100 text-red-800 border-red-300' : 'bg-yellow-100 text-yellow-800 border-yellow-300'} variant="outline">
                       {item.condition}
@@ -836,10 +836,10 @@ function CargoOperations() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold truncate">{op.vesselName || 'No vessel'}</h3>
+                      <h3 className="font-semibold truncate">{op.vesselName || t('vesselName', lang)}</h3>
                       <Badge className={statusColors[op.status] || ''} variant="outline">{op.status.replace('_', ' ')}</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-0.5">{op.operationType} — {op.cargoType} — Berth {op.berthNumber || '-'}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">{op.operationType} — {op.cargoType} — {t('berthNumber', lang)} {op.berthNumber || '-'}</p>
                     <p className="text-sm text-muted-foreground truncate">{op.description}</p>
                     <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                       <span>{op.reference}</span>
@@ -859,19 +859,19 @@ function CargoOperations() {
       {/* New Operation Dialog */}
       <Dialog open={newOpDialog} onOpenChange={setNewOpDialog}>
         <DialogContent>
-          <DialogHeader><DialogTitle>New Cargo Operation</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t('cargo', lang)}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div><Label>Operation Type</Label>
+            <div><Label>{t('cargoType', lang)}</Label>
               <Select value={newOp.operationType} onValueChange={(v) => setNewOp(p => ({ ...p, operationType: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unloading">{t('unloading', lang)}</SelectItem><SelectItem value="loading">{t('loading', lang)}</SelectItem>
-                  <SelectItem value="tally">Tally Check</SelectItem><SelectItem value="transfer">Transfer</SelectItem>
+                  <SelectItem value="tally">{t('tally', lang)}</SelectItem><SelectItem value="transfer">Transfer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div><Label>{t('vesselName', lang)}</Label><Input placeholder="e.g. MV ATLANTIC STAR" value={newOp.vesselName} onChange={(e) => setNewOp(p => ({ ...p, vesselName: e.target.value }))} /></div>
-            <div><Label>Berth Number</Label><Input placeholder="e.g. 125" value={newOp.berthNumber} onChange={(e) => setNewOp(p => ({ ...p, berthNumber: e.target.value }))} /></div>
+            <div><Label>{t('berthNumber', lang)}</Label><Input placeholder="e.g. 125" value={newOp.berthNumber} onChange={(e) => setNewOp(p => ({ ...p, berthNumber: e.target.value }))} /></div>
             <div><Label>{t('cargoType', lang)}</Label>
               <Select value={newOp.cargoType} onValueChange={(v) => setNewOp(p => ({ ...p, cargoType: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -883,7 +883,7 @@ function CargoOperations() {
             </div>
             <div><Label>{t('description', lang)}</Label><Textarea placeholder="Cargo description..." value={newOp.description} onChange={(e) => setNewOp(p => ({ ...p, description: e.target.value }))} /></div>
           </div>
-          <DialogFooter><Button onClick={createOp} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">Create Operation</Button></DialogFooter>
+          <DialogFooter><Button onClick={createOp} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">{t('create', lang)}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -920,7 +920,7 @@ function DocumentManagement() {
     await fetch('/api/documents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(docData) });
     setNewDocDialog(false);
     setPhotos([]);
-    toast({ title: 'Document Created' });
+    toast({ title: t('success', lang), description: t('documents', lang) });
     loadDocs();
   };
 
@@ -935,9 +935,9 @@ function DocumentManagement() {
       if (res.ok) {
         const data = await res.json();
         setPhotos(prev => [...prev, data.url]);
-        toast({ title: 'Photo added', description: file.name });
+        toast({ title: t('success', lang), description: file.name });
       } else {
-        toast({ title: 'Upload failed', description: file.name, variant: 'destructive' });
+        toast({ title: t('error', lang), description: file.name, variant: 'destructive' });
       }
     }
     setUploading(false);
@@ -952,13 +952,13 @@ function DocumentManagement() {
     const { currentUser } = useAppStore.getState();
     if (!currentUser) return;
     await fetch('/api/documents', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: docId, status: 'signed' }) });
-    toast({ title: 'Document Signed', description: 'Digital signature applied' });
+    toast({ title: t('success', lang), description: t('signDocument', lang) });
     loadDocs();
   };
 
   const docTypeLabels: Record<string, string> = {
-    bill_of_lading: 'Bill of Lading', delivery_note: 'Delivery Note', damage_report: 'Damage Report',
-    customs: 'Customs Declaration', packing_list: 'Packing List', weigh_bridge: 'Weigh Bridge Ticket',
+    bill_of_lading: t('billOfLading', lang), delivery_note: t('deliveryNote', lang), damage_report: t('damageReport', lang),
+    customs: t('customsDoc', lang), packing_list: 'Packing List', weigh_bridge: 'Weigh Bridge Ticket',
   };
 
   const docTypeIcons: Record<string, React.ReactNode> = {
@@ -980,7 +980,7 @@ function DocumentManagement() {
         ))}
         <div className="flex-1" />
         <Button onClick={() => setNewDocDialog(true)} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
-          <Plus className="h-4 w-4 mr-2" /> New Document
+          <Plus className="h-4 w-4 mr-2" /> {t('add', lang)}
         </Button>
       </div>
 
@@ -997,12 +997,12 @@ function DocumentManagement() {
                     <h3 className="font-semibold text-sm">{docTypeLabels[doc.docType] || doc.docType}</h3>
                     <Badge className={statusColors[doc.status] || ''} variant="outline">{doc.status.replace('_', ' ')}</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">Ref: {doc.reference}</p>
+                  <p className="text-sm text-muted-foreground">{t('reference', lang)}: {doc.reference}</p>
                   {doc.content && (() => { try { const p = JSON.parse(doc.content); return <p className="text-xs text-muted-foreground mt-1 truncate max-w-lg">{Object.entries(p).slice(0,3).map(([k,v]) => `${k}: ${v}`).join(' · ')}</p>; } catch { return <p className="text-xs text-muted-foreground mt-1 truncate max-w-lg">{doc.content}</p>; } })()}
                   {doc.signatures && doc.signatures.length > 0 && (
                     <div className="flex items-center gap-1 mt-2">
                       <Signature className="h-3 w-3 text-green-500" />
-                      <span className="text-xs text-green-600">{doc.signatures.length} signature(s)</span>
+                      <span className="text-xs text-green-600">{doc.signatures.length} {t('signedBy', lang)}</span>
                     </div>
                   )}
                 </div>
@@ -1018,7 +1018,7 @@ function DocumentManagement() {
               {/* Expanded view */}
               {viewDoc?.id === doc.id && doc.content && (
                 <div className="mt-4 pt-4 border-t">
-                  <h4 className="font-medium text-sm mb-2">Document Details</h4>
+                  <h4 className="font-medium text-sm mb-2">{t('details', lang)}</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {(() => { try { const parsed = JSON.parse(doc.content); return Object.entries(parsed).map(([k, v]) => (
                       <div key={k} className="p-2 rounded bg-slate-50 dark:bg-slate-800/50">
@@ -1027,11 +1027,11 @@ function DocumentManagement() {
                       </div>
                     )); } catch { return <p className="col-span-2 text-sm text-muted-foreground">{doc.content}</p>; } })()}
                   </div>
-                  {doc.notes && <p className="text-sm text-muted-foreground mt-3 italic">Notes: {doc.notes}</p>}
+                  {doc.notes && <p className="text-sm text-muted-foreground mt-3 italic">{t('notes', lang)}: {doc.notes}</p>}
                   {/* Display attached photos */}
                   {doc.photos && (() => { try { const photoUrls: string[] = JSON.parse(doc.photos); return photoUrls.length > 0 ? (
                     <div className="mt-3">
-                      <h5 className="text-xs font-medium text-muted-foreground mb-2">Attached Photos</h5>
+                      <h5 className="text-xs font-medium text-muted-foreground mb-2">{t('photoEvidence', lang)}</h5>
                       <div className="grid grid-cols-3 gap-2">
                         {photoUrls.map((url, i) => (
                           <a key={i} href={url} target="_blank" rel="noopener noreferrer">
@@ -1050,9 +1050,9 @@ function DocumentManagement() {
 
       <Dialog open={newDocDialog} onOpenChange={setNewDocDialog}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Create Document</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t('create', lang)}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div><Label>Document Type</Label>
+            <div><Label>{t('docType', lang)}</Label>
               <Select value={newDoc.docType} onValueChange={(v) => setNewDoc(p => ({ ...p, docType: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -1060,16 +1060,16 @@ function DocumentManagement() {
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Reference Number</Label><Input placeholder="e.g. BL-ANT-2026-5521" value={newDoc.reference} onChange={(e) => setNewDoc(p => ({ ...p, reference: e.target.value }))} /></div>
+            <div><Label>{t('reference', lang)}</Label><Input placeholder="e.g. BL-ANT-2026-5521" value={newDoc.reference} onChange={(e) => setNewDoc(p => ({ ...p, reference: e.target.value }))} /></div>
             <div><Label>{t('notes', lang)}</Label><Textarea placeholder="Additional notes..." value={newDoc.notes} onChange={(e) => setNewDoc(p => ({ ...p, notes: e.target.value }))} /></div>
             
             {/* Photo Capture Section */}
             <div>
-              <Label className="flex items-center gap-2"><Camera className="h-4 w-4" /> Attach Photos</Label>
+              <Label className="flex items-center gap-2"><Camera className="h-4 w-4" /> {t('photoEvidence', lang)}</Label>
               <div className="mt-2 flex items-center gap-3">
                 <label className="cursor-pointer flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
                   <Camera className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">{uploading ? 'Uploading...' : 'Take Photo / Upload'}</span>
+                  <span className="text-sm text-muted-foreground">{uploading ? t('loading', lang) + '...' : t('takePhoto', lang)}</span>
                   <input type="file" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment" multiple className="hidden" onChange={handlePhotoCapture} disabled={uploading} />
                 </label>
               </div>
@@ -1087,7 +1087,7 @@ function DocumentManagement() {
               )}
             </div>
           </div>
-          <DialogFooter><Button onClick={createDoc} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">Create Document</Button></DialogFooter>
+          <DialogFooter><Button onClick={createDoc} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">{t('create', lang)}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -1119,10 +1119,10 @@ function SafetyChecklists() {
 
   const createChecklist = async () => {
     if (!currentUser) return;
-    const items = getChecklistTemplate(newCl.checkType);
+    const items = getChecklistTemplate(newCl.checkType, lang);
     await fetch('/api/safety', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: currentUser.id, checkType: newCl.checkType, location: newCl.location, status: 'pending', items }) });
     setNewClDialog(false);
-    toast({ title: 'Safety Checklist Created' });
+    toast({ title: t('success', lang), description: t('safety', lang) });
     loadChecklists();
   };
 
@@ -1141,28 +1141,28 @@ function SafetyChecklists() {
     const allAnswered = selectedCl.items?.every(i => i.passed !== null);
     const anyFailed = selectedCl.items?.some(i => i.passed === false);
     await fetch('/api/safety', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: selectedCl.id, status: anyFailed ? 'failed' : 'completed' }) });
-    toast({ title: anyFailed ? 'Checklist Failed — Issues Found' : 'Checklist Completed — All Clear', variant: anyFailed ? 'destructive' : 'default' });
+    toast({ title: t('completeCheck', lang), variant: anyFailed ? 'destructive' : 'default' });
     loadChecklists();
     setSelectedCl(null);
   };
 
   const clTypeLabels: Record<string, string> = {
-    pre_shift: 'Pre-Shift Check', dock_safety: 'Dock Safety', equipment: 'Equipment Check',
+    pre_shift: t('preShift', lang), dock_safety: 'Dock Safety', equipment: t('equipment', lang),
     hazardous_cargo: 'Hazardous Cargo', crane_lift: 'Crane/Lift Safety',
   };
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Safety Checklists</h2>
+        <h2 className="text-lg font-semibold">{t('safety', lang)}</h2>
         <Dialog open={newClDialog} onOpenChange={setNewClDialog}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-red-500 to-pink-600 text-white">
-              <Plus className="h-4 w-4 mr-2" /> New Checklist
+              <Plus className="h-4 w-4 mr-2" /> {t('add', lang)}
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Start Safety Checklist</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t('startCheck', lang)}</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div><Label>{t('checkType', lang)}</Label>
                 <Select value={newCl.checkType} onValueChange={(v) => setNewCl(p => ({ ...p, checkType: v }))}>
@@ -1174,7 +1174,7 @@ function SafetyChecklists() {
               </div>
               <div><Label>{t('location', lang)}</Label><Input placeholder="e.g. Quai 125" value={newCl.location} onChange={(e) => setNewCl(p => ({ ...p, location: e.target.value }))} /></div>
             </div>
-            <DialogFooter><Button onClick={createChecklist} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">Start Check</Button></DialogFooter>
+            <DialogFooter><Button onClick={createChecklist} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">{t('startCheck', lang)}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
@@ -1187,7 +1187,7 @@ function SafetyChecklists() {
                 <CardTitle className="flex items-center gap-2"><HardHat className="h-5 w-5 text-orange-500" /> {clTypeLabels[selectedCl.checkType] || selectedCl.checkType}</CardTitle>
                 <CardDescription>{selectedCl.location} — {formatDate(selectedCl.createdAt)}</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedCl(null)}><ArrowLeft className="h-4 w-4 mr-1" /> Back</Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedCl(null)}><ArrowLeft className="h-4 w-4 mr-1" /> {t('details', lang)}</Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -1220,7 +1220,7 @@ function SafetyChecklists() {
             })()}
             <div className="flex justify-end pt-4 border-t">
               <Button onClick={completeChecklist} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
-                <CheckCheck className="h-4 w-4 mr-2" /> Submit Checklist
+                <CheckCheck className="h-4 w-4 mr-2" /> {t('completeCheck', lang)}
               </Button>
             </div>
           </CardContent>
@@ -1268,23 +1268,23 @@ function SafetyChecklists() {
   );
 }
 
-function getChecklistTemplate(type: string): { category: string; question: string }[] {
+function getChecklistTemplate(type: string, lang: Language): { category: string; question: string }[] {
   const templates: Record<string, { category: string; question: string }[]> = {
     pre_shift: [
-      { category: 'Personal Protective Equipment', question: 'Hard hat worn and in good condition?' },
-      { category: 'Personal Protective Equipment', question: 'Safety boots worn?' },
-      { category: 'Personal Protective Equipment', question: 'High-visibility vest worn?' },
-      { category: 'Personal Protective Equipment', question: 'Safety glasses available?' },
-      { category: 'Personal Protective Equipment', question: 'Hearing protection available?' },
-      { category: 'Equipment', question: 'Crane pre-use inspection completed?' },
-      { category: 'Equipment', question: 'Slings and chains inspected?' },
-      { category: 'Equipment', question: 'Forklift daily check done?' },
-      { category: 'Work Area', question: 'Dock area clear of obstructions?' },
-      { category: 'Work Area', question: 'Warning signs and barriers in place?' },
-      { category: 'Work Area', question: 'Adequate lighting for operations?' },
-      { category: 'Emergency', question: 'Fire extinguishers accessible?' },
-      { category: 'Emergency', question: 'Emergency exits clear?' },
-      { category: 'Emergency', question: 'First aid kit available and stocked?' },
+      { category: t('personalProtective', lang), question: t('hardHat', lang) },
+      { category: t('personalProtective', lang), question: t('safetyBoots', lang) },
+      { category: t('personalProtective', lang), question: t('highViz', lang) },
+      { category: t('personalProtective', lang), question: t('safetyGlasses', lang) },
+      { category: t('personalProtective', lang), question: 'Hearing protection available?' },
+      { category: t('equipment', lang), question: t('craneInspection', lang) },
+      { category: t('equipment', lang), question: t('slingsInspection', lang) },
+      { category: t('equipment', lang), question: t('forkliftCheck', lang) },
+      { category: t('workArea', lang), question: t('dockClear', lang) },
+      { category: t('workArea', lang), question: t('warningSigns', lang) },
+      { category: t('workArea', lang), question: t('adequateLighting', lang) },
+      { category: t('emergency', lang), question: t('fireExtinguishers', lang) },
+      { category: t('emergency', lang), question: t('emergencyExits', lang) },
+      { category: t('emergency', lang), question: t('firstAidKit', lang) },
     ],
     dock_safety: [
       { category: 'Dock Edge', question: 'Dock edge protection in place?' },
@@ -1314,7 +1314,7 @@ function getChecklistTemplate(type: string): { category: string; question: strin
       { category: 'Segregation', question: 'Stowage complies with IMDG code?' },
       { category: 'PPE', question: 'Correct PPE for cargo type available?' },
       { category: 'PPE', question: 'Spill containment equipment ready?' },
-      { category: 'Emergency', question: 'Emergency procedures posted and understood?' },
+      { category: t('emergency', lang), question: 'Emergency procedures posted and understood?' },
     ],
     crane_lift: [
       { category: 'Pre-Lift', question: 'Lift plan prepared and communicated?' },
@@ -1355,7 +1355,7 @@ function TruckVisits() {
   const createTruck = async () => {
     await fetch('/api/trucks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...newTruck, status: 'expected', expectedArrival: new Date(Date.now() + 3600000).toISOString() }) });
     setNewTruckDialog(false);
-    toast({ title: 'Truck Visit Registered' });
+    toast({ title: t('success', lang), description: t('trucks', lang) });
     loadTrucks();
   };
 
@@ -1368,7 +1368,7 @@ function TruckVisits() {
     if (nextStatus === 'at_dock') { data.dockAssignedAt = new Date().toISOString(); data.dockNumber = 'D' + Math.ceil(Math.random() * 8); }
     if (nextStatus === 'completed') data.completedAt = new Date().toISOString();
     await fetch('/api/trucks', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    toast({ title: `Status: ${nextStatus.replace('_', ' ')}` });
+    toast({ title: t('success', lang) });
     loadTrucks();
   };
 
@@ -1381,11 +1381,11 @@ function TruckVisits() {
         <Dialog open={newTruckDialog} onOpenChange={setNewTruckDialog}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
-              <Plus className="h-4 w-4 mr-2" /> Register Visit
+              <Plus className="h-4 w-4 mr-2" /> {t('add', lang)}
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Register Truck Visit</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t('trucks', lang)}</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div><Label>{t('driverName', lang)}</Label><Input placeholder="Full name" value={newTruck.driverName} onChange={(e) => setNewTruck(p => ({ ...p, driverName: e.target.value }))} /></div>
               <div className="grid grid-cols-2 gap-4">
@@ -1399,10 +1399,10 @@ function TruckVisits() {
                   <SelectContent><SelectItem value="delivery">{t('delivery', lang)}</SelectItem><SelectItem value="pickup">{t('pickup', lang)}</SelectItem><SelectItem value="both">Both</SelectItem></SelectContent>
                 </Select>
               </div>
-              <div><Label>Cargo Description</Label><Textarea placeholder="What cargo..." value={newTruck.cargoDescription} onChange={(e) => setNewTruck(p => ({ ...p, cargoDescription: e.target.value }))} /></div>
-              <div><Label>Booking Reference</Label><Input placeholder="BK-2026-XXXX" value={newTruck.bookingRef} onChange={(e) => setNewTruck(p => ({ ...p, bookingRef: e.target.value }))} /></div>
+              <div><Label>{t('cargoDescription', lang)}</Label><Textarea placeholder="What cargo..." value={newTruck.cargoDescription} onChange={(e) => setNewTruck(p => ({ ...p, cargoDescription: e.target.value }))} /></div>
+              <div><Label>{t('bookingRef', lang)}</Label><Input placeholder="BK-2026-XXXX" value={newTruck.bookingRef} onChange={(e) => setNewTruck(p => ({ ...p, bookingRef: e.target.value }))} /></div>
             </div>
-            <DialogFooter><Button onClick={createTruck} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">Register</Button></DialogFooter>
+            <DialogFooter><Button onClick={createTruck} className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">{t('create', lang)}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
@@ -1427,9 +1427,9 @@ function TruckVisits() {
                   <p className="text-sm text-muted-foreground">{tv.truckPlate} {tv.trailerPlate && `/ ${tv.trailerPlate}`} — {tv.company}</p>
                   <p className="text-sm text-muted-foreground">{tv.purpose} — {tv.cargoDescription}</p>
                   <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                    {tv.dockNumber && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> Dock {tv.dockNumber}</span>}
+                    {tv.dockNumber && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {t('dockNumber', lang)} {tv.dockNumber}</span>}
                     {tv.bookingRef && <span>{tv.bookingRef}</span>}
-                    {tv.expectedArrival && <span>ETA: {formatTime(tv.expectedArrival)}</span>}
+                    {tv.expectedArrival && <span>{t('expectedArrival', lang)}: {formatTime(tv.expectedArrival)}</span>}
                   </div>
                 </div>
                 <div className="shrink-0">
@@ -1459,12 +1459,12 @@ function WarehouseView() {
     fetch('/api/warehouses').then(r => r.json()).then(setWarehouses);
   }, []);
 
-  const typeLabels: Record<string, string> = { general: 'General', cold: 'Cold Storage', hazardous: 'Hazardous', bulk: 'Bulk' };
+  const typeLabels: Record<string, string> = { general: 'General', cold: 'Cold Storage', hazardous: 'Hazardous', bulk: t('bulk', lang) };
   const typeColors: Record<string, string> = { general: 'from-blue-500 to-cyan-500', cold: 'from-cyan-500 to-blue-600', hazardous: 'from-red-500 to-orange-500', bulk: 'from-amber-500 to-yellow-500' };
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-6xl mx-auto">
-      <h2 className="text-lg font-semibold">Warehouses & Storage</h2>
+      <h2 className="text-lg font-semibold">{t('warehouses', lang)}</h2>
 
       {selectedWh ? (
         <Card>
@@ -1474,7 +1474,7 @@ function WarehouseView() {
                 <CardTitle>{selectedWh.name}</CardTitle>
                 <CardDescription>{selectedWh.code} — {selectedWh.location} — {typeLabels[selectedWh.type]}</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedWh(null)}><ArrowLeft className="h-4 w-4 mr-1" /> Back</Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedWh(null)}><ArrowLeft className="h-4 w-4 mr-1" /> {t('details', lang)}</Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -1483,14 +1483,14 @@ function WarehouseView() {
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">{t('capacity', lang)}</p><p className="font-semibold">{selectedWh.capacity?.toLocaleString() || '-'} slots</p></div>
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50"><p className="text-xs text-muted-foreground">{t('area', lang)}</p><p className="font-semibold">{selectedWh.area?.toLocaleString() || '-'} m²</p></div>
             </div>
-            <h4 className="font-semibold text-sm mb-3">Storage Locations</h4>
+            <h4 className="font-semibold text-sm mb-3">{t('storageLocation', lang)}</h4>
             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
               {selectedWh.storageLocations?.map((loc: any) => (
                 <div key={loc.id} className={`p-2 rounded-lg border text-center text-xs ${
                   loc.occupied ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700' : 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
                 }`}>
                   <p className="font-bold">{loc.zone}-{loc.row}-{loc.bay}</p>
-                  <p className="text-muted-foreground text-[10px]">{loc.occupied ? loc.cargoRef || 'Occupied' : 'Free'}</p>
+                  <p className="text-muted-foreground text-[10px]">{loc.occupied ? loc.cargoRef || t('occupied', lang) : 'Free'}</p>
                 </div>
               ))}
             </div>
@@ -1514,7 +1514,7 @@ function WarehouseView() {
                   <p className="text-sm text-muted-foreground">{wh.location}</p>
                   <div className="mt-3">
                     <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                      <span>{occupied}/{total} slots occupied</span>
+                      <span>{occupied}/{total} {t('occupied', lang).toLowerCase()}</span>
                       <span>{pct}%</span>
                     </div>
                     <Progress value={pct} className="h-2" />
@@ -1560,14 +1560,14 @@ function NotificationsView() {
       await fetch('/api/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: n.id, read: true }) });
     }
     loadNotifs();
-    toast({ title: 'All marked as read' });
+    toast({ title: t('success', lang) });
   };
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">{t('notifications', lang)}</h2>
-        <Button variant="outline" size="sm" onClick={markAllRead}><CheckCheck className="h-4 w-4 mr-2" /> Mark All Read</Button>
+        <Button variant="outline" size="sm" onClick={markAllRead}><CheckCheck className="h-4 w-4 mr-2" /> {t('markComplete', lang)}</Button>
       </div>
       <div className="space-y-3">
         {notifs.map(n => (
@@ -1603,17 +1603,17 @@ function ReportsView() {
   if (!stats) return <div className="p-6"><p>{t('loading', lang)}</p></div>;
 
   const reportCards = [
-    { title: 'Shifts', data: [{ label: 'Active', value: stats.activeShifts }] },
-    { title: 'Cargo', data: [{ label: 'Pending', value: stats.pendingCargo }, { label: 'In Progress', value: stats.inProgressCargo }, { label: 'Completed', value: stats.completedCargo }] },
-    { title: 'Trucks', data: [{ label: 'Expected', value: stats.expectedTrucks }, { label: 'At Dock', value: stats.atDockTrucks }] },
-    { title: 'Documents', data: [{ label: 'Pending Review', value: stats.pendingDocs }] },
-    { title: 'Safety', data: [{ label: 'Active Checks', value: stats.activeSafetyChecks }] },
-    { title: 'Personnel', data: [{ label: 'Workers', value: stats.totalWorkers }, { label: 'Chauffeurs', value: stats.totalChauffeurs }] },
+    { title: t('shifts', lang), data: [{ label: t('active', lang), value: stats.activeShifts }] },
+    { title: t('cargo', lang), data: [{ label: t('pendingCargo', lang), value: stats.pendingCargo }, { label: t('inProgressCargo', lang), value: stats.inProgressCargo }, { label: t('completedCargo', lang), value: stats.completedCargo }] },
+    { title: t('trucks', lang), data: [{ label: t('expectedTrucks', lang), value: stats.expectedTrucks }, { label: t('atDockTrucks', lang), value: stats.atDockTrucks }] },
+    { title: t('documents', lang), data: [{ label: t('pendingReview', lang), value: stats.pendingDocs }] },
+    { title: t('safety', lang), data: [{ label: t('activeSafety', lang), value: stats.activeSafetyChecks }] },
+    { title: t('admin', lang), data: [{ label: t('totalWorkers', lang), value: stats.totalWorkers }, { label: t('totalChauffeurs', lang), value: stats.totalChauffeurs }] },
   ];
 
   return (
     <div className="p-4 lg:p-6 space-y-6 max-w-6xl mx-auto">
-      <h2 className="text-lg font-semibold">Reports & Analytics</h2>
+      <h2 className="text-lg font-semibold">{t('reports', lang)}</h2>
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {reportCards.map((rc, i) => (
           <Card key={i}>
@@ -1633,7 +1633,7 @@ function ReportsView() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Warehouse Occupancy Report</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">{t('warehouseOverview', lang)}</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-4">
             {stats.warehouses.map((wh: any) => {
@@ -1681,7 +1681,7 @@ function AdminPanel() {
   useEffect(() => { fetchUsers(); fetchAudit(); }, [fetchUsers, fetchAudit]);
 
   const handleAddUser = async () => {
-    if (!newUser.email || !newUser.name) { toast({ title: t('error', lang), description: 'Email and name required', variant: 'destructive' }); return; }
+    if (!newUser.email || !newUser.name) { toast({ title: t('error', lang), description: t('email', lang) + ' & ' + t('name', lang), variant: 'destructive' }); return; }
     const res = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newUser) });
     if (res.ok) {
       const data = await res.json();
@@ -1692,7 +1692,7 @@ function AdminPanel() {
 
   const handleUpdateUser = async (id: string, updates: any) => {
     const res = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...updates }) });
-    if (res.ok) { toast({ title: t('success', lang), description: 'User updated' }); setEditUser(null); fetchUsers(); fetchAudit(); }
+    if (res.ok) { toast({ title: t('success', lang), description: t('save', lang) }); setEditUser(null); fetchUsers(); fetchAudit(); }
     else { const err = await res.json(); toast({ title: t('error', lang), description: err.error, variant: 'destructive' }); }
   };
 
@@ -1821,7 +1821,7 @@ function AdminPanel() {
                       <td className="p-3">{entry.performerName || entry.performedBy}</td>
                       <td className="p-3">{entry.tableName} / {entry.recordId?.substring(0,8)}...</td>
                       <td className="p-3 text-xs max-w-xs truncate">
-                        {entry.newValue ? <details><summary className="cursor-pointer text-blue-600">View changes</summary><pre className="mt-1 text-xs bg-slate-100 p-2 rounded overflow-auto max-h-32">{entry.newValue}</pre></details> : '-'}
+                        {entry.newValue ? <details><summary className="cursor-pointer text-blue-600">{t('details', lang)}</summary><pre className="mt-1 text-xs bg-slate-100 p-2 rounded overflow-auto max-h-32">{entry.newValue}</pre></details> : '-'}
                       </td>
                     </tr>
                   ))}
@@ -2000,8 +2000,8 @@ function MyDeliveriesView() {
               </div>
               <Badge className={statusColors[tv.status] || 'bg-gray-100 text-gray-800'}>{tv.status.replace(/_/g, ' ')}</Badge>
             </div>
-            {tv.blReference && <p className="text-xs text-slate-400 mt-2">B/L: {tv.blReference}</p>}
-            {tv.bookingRef && <p className="text-xs text-slate-400">Booking: {tv.bookingRef}</p>}
+            {tv.blReference && <p className="text-xs text-slate-400 mt-2">{t('blReference', lang)}: {tv.blReference}</p>}
+            {tv.bookingRef && <p className="text-xs text-slate-400">{t('bookingRef', lang)}: {tv.bookingRef}</p>}
 
             <div className="flex gap-2 mt-4">
               {tv.status === 'expected' && (
