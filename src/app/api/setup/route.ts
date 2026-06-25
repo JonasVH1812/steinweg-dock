@@ -26,6 +26,8 @@ async function doSetup() {
 
     if (tableCheck.rows.length > 0) {
       const userCount = await client.query('SELECT COUNT(*) as count FROM "User"');
+      // Always ensure language column exists, even on already-setup databases
+      await client.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "language" TEXT DEFAULT 'en'`).catch(() => {});
       if (parseInt(userCount.rows[0].count) > 0) {
         await client.query('COMMIT');
         return NextResponse.json({ status: 'already_setup', users: parseInt(userCount.rows[0].count) });
