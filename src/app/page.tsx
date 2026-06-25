@@ -2653,7 +2653,10 @@ function MainApp() {
 
 // ============ PAGE EXPORT ============
 export default function Page() {
-  const { currentUser } = useAppStore();
+  const { currentUser, hydrate } = useAppStore();
+
+  // Hydrate from localStorage after mount to avoid SSR/client mismatch
+  useEffect(() => { hydrate(); }, [hydrate]);
 
   return (
     <>

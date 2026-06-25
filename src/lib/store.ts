@@ -26,6 +26,7 @@ interface AppState {
   sidebarOpen: boolean;
   language: Language;
   darkMode: boolean;
+  hydrated: boolean;
   setCurrentUser: (user: any) => void;
   setCurrentRole: (role: UserRole) => void;
   setCurrentView: (view: AppView) => void;
@@ -33,6 +34,7 @@ interface AppState {
   setSidebarOpen: (open: boolean) => void;
   setLanguage: (lang: Language) => void;
   setDarkMode: (dark: boolean) => void;
+  hydrate: () => void;
   logout: () => void;
 }
 
@@ -42,8 +44,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentView: 'dashboard',
   seeded: false,
   sidebarOpen: false,
-  language: (typeof localStorage !== 'undefined' && localStorage.getItem('lang') as Language) || 'en',
-  darkMode: (typeof localStorage !== 'undefined' && localStorage.getItem('darkMode') === 'true') || false,
+  // Always start with defaults to avoid hydration mismatch
+  language: 'en',
+  darkMode: false,
+  hydrated: false,
+  // Call hydrate() once on the client after mount to load from localStorage
+  hydrate: () => {
+    if (get().hydrated) return;
+    const lang = (typeof localStorage !== 'undefined' && localStorage.getItem('lang') as Language) || 'en';
+    const dark = (typeof localStorage !== 'undefined' && localStorage.getItem('darkMode') === 'true') || false;
+    set({ language: lang, darkMode: dark, hydrated: true });
+  },
   setCurrentUser: (user) => {
     // When user logs in, load their saved language preference
     if (user?.language) {
