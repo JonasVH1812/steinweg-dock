@@ -96,15 +96,19 @@ function LoginScreen() {
   const [loginError, setLoginError] = useState('');
 
   const fetchUsers = useCallback(async () => {
-    const res = await fetch('/api/users');
-    if (res.ok) { const data = await res.json(); setUsers(data); if (data.length > 0) setSeeded(true); }
+    try {
+      const res = await fetch('/api/users');
+      if (res.ok) { const data = await res.json(); if (Array.isArray(data)) { setUsers(data); if (data.length > 0) setSeeded(true); } }
+    } catch {}
   }, [setSeeded]);
 
   const [, startTransitionLogin] = useTransition();
   useEffect(() => {
     fetch('/api/users').then(r => r.json()).then(data => {
-      startTransitionLogin(() => { setUsers(data); if (data.length > 0) setSeeded(true); });
-    });
+      if (Array.isArray(data)) {
+        startTransitionLogin(() => { setUsers(data); if (data.length > 0) setSeeded(true); });
+      }
+    }).catch(() => {});
   }, [startTransitionLogin, setSeeded]);
 
   const seedDb = async () => {
@@ -134,6 +138,7 @@ function LoginScreen() {
     if (result?.ok) {
       // Fetch user data from our API
       const usersRes = await fetch('/api/users');
+      if (!usersRes.ok) throw new Error('Failed to fetch users');
       if (usersRes.ok) {
         const allUsers = await usersRes.json();
         const user = allUsers.find((u: any) => u.email === email);

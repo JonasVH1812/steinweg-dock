@@ -4,15 +4,26 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(req: NextRequest) {
   try {
     const role = req.nextUrl.searchParams.get('role');
-    let sql = 'SELECT "id", "email", "name", "role", "badge", "phone", "language", "active" FROM "User"';
+    let sql = 'SELECT "id", "email", "name", "role", "badge", "phone", "active" FROM "User"';
     const params: string[] = [];
     if (role) {
       params.push(role);
       sql += ` WHERE "role" = $1`;
     }
     sql += ' ORDER BY "name" ASC';
-    const result = await query(sql, params);
-    return NextResponse.json(result.rows);
+    // Try with language column, fallback without
+    try {
+      const result = await query(
+        'SELECT "id", "email", "name", "role", "badge", "phone", "language", "active" FROM "User"' +
+        (role ? ' WHERE "role" = $1' : '') + ' ORDER BY "name" ASC',
+        params
+      );
+      return NextResponse.json(result.rows);
+    } catch {
+      // Language column may not exist yet - query without it
+      const result = await query(sql, params);
+      return NextResponse.json(result.rows.map((r: any) => ({ ...r, language: 'en' })));
+    }
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: msg }, { status: 500 });
